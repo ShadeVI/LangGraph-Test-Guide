@@ -1,0 +1,30 @@
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.env
+!.env.example
+# ── Outputs ─────────────────────────────────────────────────────────
+output/
+*.log
+# ── Angular (docs-site/) ────────────────────────────────────────────
+node_modules/
+dist/
+.angular/
+*.tsbuildinfo
+# ── IDE / OS ────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+.DS_Store
+Thumbs.db
+# ── Otros ───────────────────────────────────────────────────────────
+*.tmp
+coverage/
+.pytest_cache/
+.mypy_cache/

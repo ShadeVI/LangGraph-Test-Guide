@@ -1,0 +1,4 @@
+/* Estilos del shell raíz (los de sección viven en styles.css y componentes). */
+main {
+  display: block;
+}
