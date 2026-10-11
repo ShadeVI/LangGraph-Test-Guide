@@ -1,0 +1,19 @@
+# Blueprint de Render para el backend demo (plan gratuito).
+# Uso: Render Dashboard → New → Blueprint → conecta este repo.
+# IMPORTANTE: este backend es SOLO demo (API_MODE=demo, sin API keys).
+# Un modo live público expondría tu cuota a todo internet: no lo hagas.
+services:
+  - type: web
+    name: multi-agente-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: API_MODE
+        value: demo
+      # Añade aquí tu GitHub Pages para que la demo pública pueda llamar:
+      # - key: API_CORS_ORIGINS
+      #   value: https://TU-USUARIO.github.io
