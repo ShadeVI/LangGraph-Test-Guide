@@ -14,7 +14,9 @@ import { Component } from '@angular/core';
         </div>
         <div class="foot-links">
           <span>Proyecto: <code>python-langGraph</code></span>
-          <span>README · requirements · tests · .env.example</span>
+          <a href="https://github.com/ShadeVI/LangGraph-Test-Guide" target="_blank" rel="noopener"
+            >★ Ver en GitHub</a
+          >
         </div>
       </div>
     </footer>
@@ -36,6 +38,8 @@ import { Component } from '@angular/core';
       }
       .foot-inner p { color: var(--muted); font-size: 0.86rem; margin: 0.3rem 0 0; max-width: 52ch; }
       .foot-links { display: grid; gap: 0.3rem; color: var(--muted); font-size: 0.82rem; align-content: start; }
+      .foot-links a { color: var(--accent-2); text-decoration: none; font-weight: 700; }
+      .foot-links a:hover { text-decoration: underline; }
       code { font-family: var(--mono); color: var(--accent-2); }
     `,
   ],

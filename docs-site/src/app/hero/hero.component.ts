@@ -23,6 +23,13 @@ import { RevealDirective } from '../shared/reveal.directive';
           <div class="cta">
             <a class="btn primary" (click)="go('proyecto')">Ver el proyecto</a>
             <a class="btn ghost" (click)="go('uso')">Guía de uso técnico</a>
+            <a
+              class="btn ghost"
+              href="https://github.com/ShadeVI/LangGraph-Test-Guide"
+              target="_blank"
+              rel="noopener"
+              >★ GitHub</a
+            >
           </div>
         </div>
 
@@ -62,6 +69,7 @@ import { RevealDirective } from '../shared/reveal.directive';
       .hero .lead strong { color: var(--text); }
       .cta { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
       .cta a { cursor: pointer; }
+      .cta a[href] { text-decoration: none; }
 
       .pipe {
         display: flex;
