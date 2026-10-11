@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RevealDirective } from '../shared/reveal.directive';
@@ -102,6 +102,7 @@ es.<span class="f">addEventListener</span>(<span class="s">"node"</span>, e =&gt
               @else { ● sin conexión }
             </span>
           </div>
+          <p class="hint">Privacidad: esta página no contacta con ningún servicio hasta que pulses «Comprobar conexión» o ejecutes una demo.</p>
           @if (apiOk() === false) {
             <div class="callout warn">
               <strong>La API no responde.</strong> Arráncala en una terminal desde la raíz
@@ -432,6 +433,7 @@ python -m uvicorn api.main:app --port 8000</pre>
       .narr li { color: var(--muted); font-size: 0.93rem; }
       .narr li::marker { color: var(--accent-2); }
       .narr .hint { margin: 0.8rem 0 0; font-size: 0.8rem; }
+      p.hint { margin: 0.6rem 0 0; font-size: 0.78rem; color: var(--muted); }
       ul.why { margin: 0.4rem 0 0.8rem; padding-left: 1.2rem; display: grid; gap: 0.4rem; }
       ul.why li { color: var(--muted); font-size: 0.9rem; }
       ul.why li::marker { color: var(--accent-2); }
@@ -444,7 +446,7 @@ python -m uvicorn api.main:app --port 8000</pre>
     `,
   ],
 })
-export class DemoPage implements OnInit, OnDestroy {
+export class DemoPage implements OnDestroy {
   readonly api = inject(ApiService);
   readonly flowNodes = [...FLOW];
 
@@ -471,10 +473,6 @@ export class DemoPage implements OnInit, OnDestroy {
   private timer?: ReturnType<typeof setInterval>;
   private seq = 0;
   private readonly consoleBox = viewChild<ElementRef<HTMLElement>>('consoleBox');
-
-  ngOnInit(): void {
-    void this.checkHealth();
-  }
 
   ngOnDestroy(): void {
     this.stopTimer();
