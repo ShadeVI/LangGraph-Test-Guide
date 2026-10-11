@@ -44,14 +44,17 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
           </p>
         </div>
 
-        <div class="callout warn" appReveal>
-          <strong>⚠️ Demo en vivo no disponible por ahora en esta web pública.</strong>
-          Para probarla: descarga el repo, sigue la <a routerLink="/uso">Guía de uso</a>
-          (Ollama + API en local) y esta misma página se conectará a tu
-          <code>localhost:8000</code>.
-          <pre class="code">git clone https://github.com/TU-USUARIO/LangGraph-Test-Guide.git</pre>
-        </div>
+        @if (!isLocalhost()) {
+          <div class="callout warn" appReveal>
+            <strong>⚠️ Demo en vivo no disponible por ahora en esta web pública.</strong>
+            Para probarla: descarga el repo, sigue la <a routerLink="/uso">Guía de uso</a>
+            (Ollama + API en local) y esta misma página se conectará a tu
+            <code>localhost:8000</code>.
+            <pre class="code">git clone https://github.com/ShadeVI/LangGraph-Test-Guide.git</pre>
+          </div>
+        }
 
+        @if (isLocalhost()) {
         <div class="card" appReveal>
           <div class="api-row">
             <label>
@@ -257,6 +260,7 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
             </div>
           }
         }
+        }
       </div>
     </section>
   `,
@@ -408,6 +412,11 @@ export class DemoPage implements OnDestroy {
   readonly apiOk = signal<boolean | null>(null);
   readonly apiMode = signal('');
   readonly elapsed = signal(0);
+  /** true solo en local (ng serve): ahí sí tiene sentido la consola en vivo. */
+  readonly isLocalhost = signal(
+    typeof window !== 'undefined' &&
+      ['localhost', '127.0.0.1', '[::1]', ''].includes(window.location.hostname),
+  );
 
   private source?: EventSource;
   private timer?: ReturnType<typeof setInterval>;
