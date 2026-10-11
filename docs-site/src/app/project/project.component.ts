@@ -152,6 +152,36 @@ import { RevealDirective } from '../shared/reveal.directive';
         </div>
 
         <div appReveal>
+          <h3>El directo: ¿qué es SSE y por qué lo elegimos?</h3>
+          <p class="lead" style="font-size: 0.95rem">
+            La consola <code>/demo</code> no pregunta al servidor «¿ya terminaste?» en bucle:
+            usa <strong>SSE (Server-Sent Events)</strong>, donde el servidor mantiene abierta una
+            conexión HTTP y <strong>empuja mensajes</strong> (<code>event: … / data: …</code>) a
+            medida que cada nodo termina. Unidireccional y con <code>EventSource</code> nativo, sin
+            librerías.
+          </p>
+          <table class="doc-table">
+            <tr><th>Técnica</th><th>Cómo funciona</th><th>Cuándo conviene</th></tr>
+            <tr><td>Polling</td><td>El navegador pregunta «¿ya?» cada X segundos</td><td>Datos que cambian poco; desperdicia peticiones</td></tr>
+            <tr><td><strong>SSE</strong></td><td>El servidor avisa solo cuando hay algo nuevo</td><td><strong>Retransmitir un proceso</strong> (nuestro caso)</td></tr>
+            <tr><td>WebSockets</td><td>Canal bidireccional permanente</td><td>Chat, juegos: hablan los dos lados</td></tr>
+          </table>
+          <div class="callout ok">
+            <strong>Encaje perfecto con el grafo:</strong> cada nodo terminado es un evento natural
+            (<code>node</code>, <code>route</code>, <code>done</code>) que sale gratis de
+            <code>graph.stream()</code>; el usuario ve el progreso en tiempo real en vez de un
+            spinner de 60 s; y al ser HTTP normal, pasa por proxies y CORS sin pelear.
+          </div>
+          <pre class="code"><span class="c"># Backend: genera eventos a medida que el grafo avanza</span>
+<span class="k">for</span> chunk <span class="k">in</span> graph.<span class="f">stream</span>(estado):
+    <span class="k">yield</span> <span class="s">"event: node\ndata: {{ '{' }}...{{ '}' }}\n\n"</span>
+
+<span class="c">// Frontend: escucha sin librerías</span>
+<span class="k">const</span> es = <span class="k">new</span> <span class="f">EventSource</span>(url);
+es.<span class="f">addEventListener</span>(<span class="s">"node"</span>, e =&gt; pintar(JSON.<span class="f">parse</span>(e.data)));</pre>
+        </div>
+
+        <div appReveal>
           <h3>Estructura completa del repositorio</h3>
           <pre class="code">main.py ──► src/graph/builder.py ──► researcher ──► writer ──► editor ──► END
               │            │ (arista condicional)         ▲────────── REVISAR (máx. 2)

@@ -44,36 +44,6 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
           </p>
         </div>
 
-        <div class="card" appReveal [delay]="50">
-          <h3>¿Qué es SSE y por qué se usa aquí?</h3>
-          <p>
-            <strong>SSE (Server-Sent Events)</strong> es una técnica donde el servidor mantiene
-            abierta una conexión HTTP y va <strong>empujando mensajes</strong> al navegador a medida
-            que ocurren (texto con formato <code>event: … / data: …</code>). Es unidireccional:
-            solo habla el servidor, y al navegador le basta el <code>EventSource</code> nativo, sin
-            librerías ni protocolo nuevo.
-          </p>
-          <table class="doc-table">
-            <tr><th>Técnica</th><th>Cómo funciona</th><th>Cuándo conviene</th></tr>
-            <tr><td>Polling</td><td>El navegador pregunta «¿ya?» cada X segundos</td><td>Datos que cambian poco; desperdicia peticiones</td></tr>
-            <tr><td><strong>SSE</strong></td><td>El servidor avisa solo cuando hay algo nuevo</td><td><strong>Retransmitir un proceso</strong> (nuestro caso)</td></tr>
-            <tr><td>WebSockets</td><td>Canal bidireccional permanente</td><td>Chat, juegos: hablan los dos lados</td></tr>
-          </table>
-          <p style="margin-bottom: 0.3rem"><strong>Por eso encaja con el grafo:</strong></p>
-          <ul class="why">
-            <li>Cada nodo terminado es un evento natural (<code>node</code>, <code>route</code>, <code>done</code>): el backend los emite con <code>graph.stream()</code> sin guardar estado extra.</li>
-            <li>El usuario ve el progreso <strong>en tiempo real</strong> en vez de un spinner de 60 s.</li>
-            <li>Si se cae la conexión, el navegador la reintenta solo; y es HTTP normal (pasa por proxies y CORS sin pelear).</li>
-          </ul>
-          <pre class="code"><span class="c"># Backend: genera eventos a medida que el grafo avanza</span>
-<span class="k">for</span> chunk <span class="k">in</span> graph.<span class="f">stream</span>(estado):
-    <span class="k">yield</span> <span class="s">"event: node\ndata: {{ '{' }}...{{ '}' }}\n\n"</span>
-
-<span class="c">// Frontend: escucha sin librerías</span>
-<span class="k">const</span> es = <span class="k">new</span> <span class="f">EventSource</span>(url);
-es.<span class="f">addEventListener</span>(<span class="s">"node"</span>, e =&gt; pintar(JSON.<span class="f">parse</span>(e.data)));</pre>
-        </div>
-
         <div class="callout warn" appReveal>
           <strong>⚠️ Demo en vivo no disponible por ahora en esta web pública.</strong>
           Para probarla: descarga el repo, sigue la <a routerLink="/uso">Guía de uso</a>
@@ -434,9 +404,6 @@ python -m uvicorn api.main:app --port 8000</pre>
       .narr li::marker { color: var(--accent-2); }
       .narr .hint { margin: 0.8rem 0 0; font-size: 0.8rem; }
       p.hint { margin: 0.6rem 0 0; font-size: 0.78rem; color: var(--muted); }
-      ul.why { margin: 0.4rem 0 0.8rem; padding-left: 1.2rem; display: grid; gap: 0.4rem; }
-      ul.why li { color: var(--muted); font-size: 0.9rem; }
-      ul.why li::marker { color: var(--accent-2); }
       h3 { margin-top: 1.4rem; }
       p strong { color: var(--text); }
       @media (max-width: 640px) {
