@@ -1,7 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
 
 export interface HealthStatus {
   status: string;
@@ -41,8 +40,8 @@ export interface StateSnapshot {
 export class ApiService {
   private readonly http = inject(HttpClient);
 
-  /** Base editable desde la UI (en prod apunta al backend desplegado). */
-  readonly baseUrl = signal(environment.apiBaseUrl);
+  /** Base editable desde la UI (útil si la API corre en otro host/puerto). */
+  readonly baseUrl = signal('http://localhost:8000');
 
   health(): Promise<HealthStatus> {
     return firstValueFrom(this.http.get<HealthStatus>(`${this.baseUrl()}/api/health`));

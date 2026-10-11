@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnDestroy, OnInit, inject, signal, viewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RevealDirective } from '../shared/reveal.directive';
 import { ApiService, RunResult, StateSnapshot } from './api.service';
@@ -29,7 +30,7 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
 
 @Component({
   selector: 'app-page-demo',
-  imports: [FormsModule, RevealDirective],
+  imports: [FormsModule, RouterLink, RevealDirective],
   template: `
     <section class="section">
       <div class="container">
@@ -71,6 +72,14 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
 <span class="c">// Frontend: escucha sin librerías</span>
 <span class="k">const</span> es = <span class="k">new</span> <span class="f">EventSource</span>(url);
 es.<span class="f">addEventListener</span>(<span class="s">"node"</span>, e =&gt; pintar(JSON.<span class="f">parse</span>(e.data)));</pre>
+        </div>
+
+        <div class="callout warn" appReveal>
+          <strong>⚠️ Demo en vivo no disponible por ahora en esta web pública.</strong>
+          Para probarla: descarga el repo, sigue la <a routerLink="/uso">Guía de uso</a>
+          (Ollama + API en local) y esta misma página se conectará a tu
+          <code>localhost:8000</code>.
+          <pre class="code">git clone https://github.com/TU-USUARIO/LangGraph-Test-Guide.git</pre>
         </div>
 
         <div class="card" appReveal>
