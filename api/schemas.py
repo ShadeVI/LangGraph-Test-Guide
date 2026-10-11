@@ -60,4 +60,5 @@ class ConfigResponse(BaseModel):
     mode: str
     max_revisions_default: int
     providers_order: list[str]
+    cors_origins: list[str] = Field(default_factory=list)
     graph: str = "researcher -> writer -> editor -[REVISAR]-> writer / -[APROBADO]-> END"

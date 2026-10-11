@@ -29,6 +29,7 @@ class Settings(BaseSettings):
         log_level: Nivel de logging raíz (INFO, DEBUG, WARNING, ERROR).
         max_revisions: Nº máximo de vueltas editor→writer antes de forzar END.
         api_mode: "demo" (LLM guionizado, sin keys) o "live" (Groq→Gemini→Ollama).
+        api_cors_origins: Orígenes permitidos por la API, separados por comas.
     """
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -48,6 +49,9 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     max_revisions: int = Field(default=2, alias="MAX_REVISIONS")
     api_mode: str = Field(default="demo", alias="API_MODE")
+    api_cors_origins: str = Field(
+        default="http://localhost:4200,http://127.0.0.1:4200", alias="API_CORS_ORIGINS"
+    )
 
 
 @lru_cache(maxsize=1)

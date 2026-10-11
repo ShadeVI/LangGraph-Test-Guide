@@ -30,22 +30,25 @@ from api.schemas import ConfigResponse, HealthResponse, RunRequest, RunResponse
 
 logger = get_logger(__name__)
 
-#: Orígenes permitidos para la web de documentación en local.
-CORS_ORIGINS = ["http://localhost:4200", "http://127.0.0.1:4200"]
+
+def _cors_origins() -> list[str]:
+    """Lee los orígenes permitidos de settings (coma → lista limpia)."""
+    raw = get_settings().api_cors_origins
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 @asynccontextmanager
 async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
-    logger.info("API lista (mode=%s).", settings.api_mode)
+    logger.info("API lista (mode=%s, cors=%s).", settings.api_mode, _cors_origins())
     yield
 
 
 app = FastAPI(title="Multi-Agente API", version="1.0.0", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=_cors_origins(),
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
@@ -71,6 +74,7 @@ def config() -> ConfigResponse:
         mode=settings.api_mode,
         max_revisions_default=settings.max_revisions,
         providers_order=list(PROVIDER_ORDER),
+        cors_origins=_cors_origins(),
     )
 
 

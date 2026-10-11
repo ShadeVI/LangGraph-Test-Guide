@@ -35,6 +35,7 @@ class TestApi(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         body = res.json()
         self.assertEqual(body["providers_order"], ["groq", "gemini", "ollama"])
+        self.assertIn("http://localhost:4200", body["cors_origins"])
         self.assertNotIn("groq_api_key", res.text.lower())
 
     def test_run_demo_recorre_el_ciclo(self) -> None:
