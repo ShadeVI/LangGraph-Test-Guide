@@ -122,6 +122,36 @@ python tests/test_api.py</pre>
           </div>
         </div>
 
+        <div appReveal>
+          <h3>Modos demo vs live (variable API_MODE)</h3>
+          <p class="lead" style="font-size: 0.95rem">
+            La API tiene dos modos y se eligen en el <code>.env</code>. Entiende la diferencia
+            antes de arrancar nada:
+          </p>
+          <div class="grid2">
+            <div class="card">
+              <p><span class="tag">demo</span> <strong>LLM guionizado, sin keys.</strong> Respuestas
+              deterministas que siempre muestran el ciclo editor → writer. Instantáneo: ideal para
+              ver el grafo trabajar y para la web sin backend.</p>
+              <pre class="code"><span class="c"># .env (es el valor por defecto)</span>
+API_MODE=demo</pre>
+            </div>
+            <div class="card">
+              <p><span class="tag">live</span> <strong>Proveedores reales</strong> (Groq → Gemini →
+              Ollama según tu <code>.env</code>). Cada ejecución tarda 30–60 s o varios minutos en
+              CPU local, y consume cuota de tus API keys.</p>
+              <pre class="code"><span class="c"># .env (preferible: queda guardado y documentado)</span>
+API_MODE=live
+OLLAMA_MODEL=qwen3.5:4b</pre>
+            </div>
+          </div>
+          <div class="callout">
+            <strong>El arranque es idéntico</strong> (<code>python -m uvicorn api.main:app --port 8000</code>);
+            solo cambia el modo. La página <code>/demo</code> lo detecta sola (distintivo
+            «● API demo/live») y el informe final siempre indica en qué modo se generó.
+          </div>
+        </div>
+
         <div class="grid2">
           <div appReveal>
             <h3>Paso 4 · Prueba la API en modo demo (sin keys, instantáneo)</h3>

@@ -82,33 +82,6 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
           }
         </div>
 
-        <div class="card" appReveal [delay]="50">
-          <h3>Modos demo vs live (variable API_MODE)</h3>
-          <div class="grid2">
-            <div>
-              <p><span class="tag">demo</span> <strong>LLM guionizado, sin keys.</strong> Respuestas
-              deterministas que siempre muestran el ciclo editor → writer. Instantáneo: ideal para
-              ver el grafo trabajar.</p>
-              <pre class="code">python -m uvicorn api.main:app --port 8000</pre>
-            </div>
-            <div>
-              <p><span class="tag">live</span> <strong>Proveedores reales</strong> (Groq → Gemini →
-              Ollama según tu <code>.env</code>). Cada ejecución tarda 30–60 s o varios minutos en
-              CPU local, y consume cuota de tus API keys.</p>
-              <pre class="code"><span class="c"># En tu .env (preferible: queda guardado y documentado)</span>
-API_MODE=live
-OLLAMA_MODEL=qwen3.5:4b
-
-<span class="c"># Y se arranca igual que en demo:</span>
-python -m uvicorn api.main:app --port 8000</pre>
-            </div>
-          </div>
-          <div class="callout">
-            <strong>La página detecta el modo sola:</strong> el distintivo «● API demo/live» sale de
-            <code>GET /api/health</code>. El informe final siempre indica en qué modo se generó.
-          </div>
-        </div>
-
         <div class="card" appReveal [delay]="100">
           <label>
             Consulta para los agentes
