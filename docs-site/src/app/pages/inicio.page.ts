@@ -41,6 +41,7 @@ export class InicioPage {
     { icon: '🏗️', path: '/proyecto', title: 'El proyecto', text: 'Pipeline Investigador → Redactor → Editor con fallback resiliente.' },
     { icon: '⚖️', path: '/por-que', title: '¿Por qué LangGraph?', text: 'Decisiones de arquitectura trazables al código.' },
     { icon: '📖', path: '/uso', title: 'Guía de uso', text: 'Instalación, .env, CLI y uso como librería.' },
+    { icon: '🔌', path: '/mcp', title: '¿Por qué MCP?', text: 'El protocolo tras las tools: qué resuelve y por qué lo elegimos.' },
     { icon: '🔬', path: '/demo', title: 'Demo en vivo', text: 'Ejecuta los agentes de verdad contra la API y míralos trabajar nodo a nodo.' },
   ];
 }

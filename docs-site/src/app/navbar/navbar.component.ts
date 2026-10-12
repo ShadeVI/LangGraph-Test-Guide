@@ -159,6 +159,7 @@ export class NavbarComponent {
     { path: '/por-que', label: '¿Por qué LangGraph?' },
     { path: '/uso', label: 'Guía de uso' },
     { path: '/ejemplos', label: 'Ejemplos' },
+    { path: '/mcp', label: '¿Por qué MCP?' },
     { path: '/demo', label: '▶ Demo en vivo', demo: true },
   ];
 
