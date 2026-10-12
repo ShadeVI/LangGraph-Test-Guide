@@ -111,9 +111,10 @@ python main.py
 <span class="c"># 3 inputs que recorren rutas distintas (lineal, revisión, fallback+tope)</span>
 python demo_paths.py
 
-<span class="c"># Tests: 17 del grafo + 6 de la API (dobles, sin red ni keys)</span>
+<span class="c"># Tests: 21 del grafo + 6 de la API + 14 de finanzas (dobles, sin red ni keys)</span>
 python tests/test_pipeline.py
-python tests/test_api.py</pre>
+python tests/test_api.py
+python tests/test_finance.py</pre>
             <div class="callout">
               <strong>Qué mirar en los logs:</strong> la cadena de fallback al arrancar, el veredicto
               del editor, las decisiones de <code>Enrutado: editor -&gt; writer/END</code> y el resumen
@@ -195,6 +196,39 @@ npx ng serve --open   <span class="c"># http://localhost:4200/demo</span></pre>
         </div>
 
         <div appReveal>
+          <h3>Probar el flujo financiero (CSV + MCP + informe)</h3>
+          <div class="grid2">
+            <div>
+              <p class="lead" style="font-size: 0.93rem">
+                <strong>Directo (un paso):</strong> sube tu CSV o nada (usa el mock con 1 alerta
+                garantizada):
+              </p>
+              <pre class="code"><span class="c"># Con tu CSV</span>
+curl.exe -s -X POST http://localhost:8000/api/finance/run -F <span class="s">"file=@gastos.csv"</span>
+
+<span class="c"># Sin fichero → mock_gastos.csv</span>
+curl.exe -s -X POST http://localhost:8000/api/finance/run</pre>
+            </div>
+            <div>
+              <p class="lead" style="font-size: 0.93rem">
+                <strong>En vivo (dos pasos):</strong> guarda un job y retransmite por SSE, igual
+                que la consola /demo:
+              </p>
+              <pre class="code"><span class="c"># 1. Valida y guarda → {{ '{' }}"job_id": "..."{{ '}' }}</span>
+curl.exe -s -X POST http://localhost:8000/api/finance/jobs
+
+<span class="c"># 2. Retransmite: start → node → route … → done</span>
+curl.exe -s -N <span class="s">"http://localhost:8000/api/finance/stream?job_id=..."</span></pre>
+              <div class="callout ok">
+                <strong>Inspecciona el MCP aparte:</strong> el servidor también habla con
+                herramientas estándar (<code>mcp dev</code> o cualquier inspector MCP contra
+                <code>python -m mcp_server.server</code>).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div appReveal>
           <h3>Variables de entorno (.env): referencia rápida</h3>
           <table class="doc-table">
             <tr><th>Variable</th><th>Defecto</th><th>Rol</th></tr>
@@ -238,6 +272,8 @@ export class UsageSectionComponent {
     ['LLM_TEMPERATURE / LLM_TIMEOUT', '0.2 / 60', 'Generación y timeout (s)'],
     ['LOG_LEVEL', 'INFO', 'INFO, DEBUG, WARNING, ERROR'],
     ['MAX_REVISIONS', '2', 'Vueltas máximas del ciclo editor→writer (0 = lineal)'],
+    ['FINANCE_BUDGETS', 'data/budgets.json', 'Ruta de la BD ficticia del servidor MCP'],
+    ['FINANCE_FX_URL', 'Frankfurter (dev)', 'Endpoint de la tasa EUR→USD (override para tests)'],
     ['API_MODE', 'demo', 'demo = LLM guionizado (web sin keys) · live = proveedores reales'],
   ];
 }

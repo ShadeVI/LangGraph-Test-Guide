@@ -137,6 +137,40 @@ import { RevealDirective } from '../shared/reveal.directive';
         </div>
 
         <div appReveal>
+          <h3>Segundo flujo: análisis financiero (CSV + tools MCP)</h3>
+          <p class="lead" style="font-size: 0.95rem">
+            El mismo proyecto orquesta un <strong>segundo grafo</strong> con otra capacidad de
+            LangGraph: el loop <strong>agente ⇄ herramientas</strong>. Subes un CSV de gastos y el
+            sistema lo agrega, consulta presupuestos y la tasa de cambio, e informa en Markdown.
+          </p>
+          <ol class="journey">
+            @for (s of financeJourney; track s.title; let i = $index) {
+              <li appReveal [delay]="i * 80">
+                <span class="j-num">{{ i + 1 }}</span>
+                <div>
+                  <strong>{{ s.title }}</strong>
+                  <p>{{ s.text }}</p>
+                </div>
+              </li>
+            }
+          </ol>
+          <div class="callout ok">
+            <strong>¿Por qué MCP y no funciones directas?</strong> El servidor
+            (<code>mcp_server/</code>) habla protocolo estándar por <code>stdio</code>: cualquier
+            cliente MCP (nuestro grafo, el inspector, Claude Desktop) usa las mismas tools sin
+            cambiar código. Cada ejecución abre <strong>una sesión y la cierra</strong> (sin estado
+            compartido), y el loop analyst ⇄ tools está acotado a 5 vueltas. El informe final lo
+            compone un reporter <strong>determinista</strong> (plantilla, sin LLM): rápido y testeable.
+          </div>
+          <div>
+            <span class="tag">mcp_server/server.py</span>
+            <span class="tag">src/finance/ (state, nodes, builder, service)</span>
+            <span class="tag">data/mock_gastos.csv + budgets.json</span>
+            <span class="tag">api/finance.py (jobs + stream + run)</span>
+          </div>
+        </div>
+
+        <div appReveal>
           <h3>Cómo está construido el frontend (esta web)</h3>
           <p class="lead" style="font-size: 0.95rem">
             Aplicación <strong>Angular 22</strong> multipágina (una ruta por tema) en
@@ -187,8 +221,11 @@ es.<span class="f">addEventListener</span>(<span class="s">"node"</span>, e =&gt
               │            │ (arista condicional)         ▲────────── REVISAR (máx. 2)
               ├── config/ (settings.py ← .env, logging_config.py)
               ├── src/llm/ (groq → gemini → ollama + ResilientLLMClient)
-              ├── api/ (FastAPI: /health, /config, POST /run, SSE /run/stream)
-              ├── tests/ (test_pipeline.py 17 tests · test_api.py 6 tests)
+              ├── src/finance/ (2º grafo: loader → extractor → analyst ⇄ tools → reporter)
+              ├── mcp_server/ (tools MCP: presupuestos + tasa Frankfurter)
+              ├── data/ (mock_gastos.csv + budgets.json)
+              ├── api/ (FastAPI: /health, /config, POST /run, SSE /run/stream, /finance/*)
+              ├── tests/ (pipeline 21 · api 6 · finance 14 tests)
               └── docs-site/ (esta web en Angular)</pre>
         </div>
       </div>
@@ -240,6 +277,29 @@ export class ProjectSectionComponent {
     {
       title: 'Recibes el informe (y la trazabilidad)',
       text: 'El Markdown final más el registro de qué proveedor respondió en cada llamada, qué ruta se recorrió y qué fallos se recuperaron por el camino.',
+    },
+  ];
+
+  readonly financeJourney = [
+    {
+      title: 'Subes un CSV (o usas el mock)',
+      text: 'Columnas fecha,concepto,categoria,importe,moneda. Sin fichero se analiza el ejemplo incorporado. Límite sano: 500 filas, 1 MB; el CSV crudo nunca viaja entero por el estado.',
+    },
+    {
+      title: 'Extractor determinista (sin IA)',
+      text: 'Suma totales por categoría y moneda con código normal: rápido, exacto y testeable. La IA entra solo donde aporta: decidir y redactar.',
+    },
+    {
+      title: 'El analista pide tools por MCP',
+      text: 'El LLM ve los totales y decide: consulta límites de presupuesto y la tasa EUR→USD en tiempo real a través del servidor MCP. Cada llamada queda registrada.',
+    },
+    {
+      title: 'Loop acotado analyst ⇄ tools',
+      text: 'Con los resultados, el analista puede pedir más o cerrar con hallazgos. Tope de 5 vueltas: imposible el bucle infinito.',
+    },
+    {
+      title: 'Reporter determinista + informe .md',
+      text: 'Una plantilla compone el Markdown: tabla por categoría con USD convertidos, alertas de presupuesto, tasa aplicada y hallazgos. Descargable desde la web.',
     },
   ];
 
@@ -325,10 +385,21 @@ export class ProjectSectionComponent {
       what: 'Validación de datos y configuración con tipos en Python.',
       use: 'El .env se convierte en un objeto Settings tipado; la API valida peticiones y respuestas.',
     },
+    {
+      icon: '🔌',
+      name: 'MCP (Model Context Protocol)',
+      what: 'Protocolo abierto para que los LLMs usen herramientas externas de forma estándar.',
+      use: 'Nuestro micro-servidor expone presupuestos y tasa de cambio; el analista las consume por protocolo, no con código a medida.',
+    },
+    {
+      icon: '💱',
+      name: 'Frankfurter API',
+      what: 'API gratuita y sin key con tipos de cambio oficiales (datos del BCE).',
+      use: 'La tool de tasa EUR→USD la consulta en tiempo real en cada análisis.',
+    },
   ];
 
-  readonly layers = [
-    {
+  readonly layers = [    {
       name: 'Entrada: CLI o API REST',
       text: 'Dos puertas al mismo grafo. main.py es la terminal (pregunta → informe por pantalla o archivo). api/ es la puerta HTTP que usa la web: valida la petición, ejecuta y retransmite cada nodo por SSE.',
       files: ['main.py', 'api/main.py', 'api/schemas.py', 'api/service.py'],

@@ -220,6 +220,22 @@ export class ExamplesSectionComponent {
       trace:
         'path = [researcher, writer, editor, writer, editor] · revision_count = 1 · current_step = done · el ciclo siempre termina: garantía anti-bucle infinito',
     },
+    {
+      tab: 'Caso D · Finanzas + MCP',
+      input: 'POST /api/finance/run (sin fichero → mock_gastos.csv, 12 filas)',
+      logs: [
+        'INFO  | Loader: 12 filas válidas (0 descartadas), mock=True.',
+        'INFO  | Extractor: 3 categorías, top=[COMIDA, TRANSPORTE, OCIO].',
+        'INFO  | MCP: 2 tools disponibles: [get_budget_limit, get_eur_usd_rate].',
+        'INFO  | Analista responde con 4 tool_calls (vía demo-finance).',
+        'INFO  | MCP → get_budget_limit + get_eur_usd_rate (tasa 1.1181 del día).',
+        'INFO  | Enrutado finance: analyst -> reporter (sin tool_calls).',
+        'INFO  | Reporter: informe de 862 caracteres, 2 alertas.',
+      ].join('\n'),
+      output: '# Informe de gastos — mock_gastos.csv\n\n| COMIDA | 502.00 | — | 502.00 |\n| OCIO | 36.99 | 239.99 (~214.64 EUR) | 251.63 |\n\n- ⚠ COMIDA: supera el límite 300.00 EUR\n- ⚠ OCIO: supera el límite 150.00 EUR',
+      trace:
+        'path = [loader, extractor, analyst, tools, analyst, reporter] · tool_iterations = 1 · tasa Frankfurter en vivo · informe descargable en /demo',
+    },
   ];
 
   prev(): void {
