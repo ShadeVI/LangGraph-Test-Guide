@@ -81,16 +81,17 @@ interface NavLink {
         animation: pulseGlow 3s ease-in-out infinite;
       }
       .brand-text em { font-style: normal; color: var(--accent-2); }
-      .links { display: flex; gap: 0.25rem; align-items: center; }
+      .links { display: flex; gap: 0.15rem; align-items: center; }
       .links a {
         position: relative;
         cursor: pointer;
         text-decoration: none;
         color: var(--muted);
-        font-size: 0.84rem;
+        font-size: 0.8rem;
         font-weight: 600;
-        padding: 0.5rem 0.7rem;
+        padding: 0.5rem 0.55rem;
         border-radius: 8px;
+        white-space: nowrap;
         transition: color 0.2s ease, background 0.2s ease;
       }
       .links a:hover { color: var(--text); background: rgba(124, 157, 255, 0.1); }
@@ -130,7 +131,7 @@ interface NavLink {
         cursor: pointer;
       }
       .burger span { width: 20px; height: 2px; background: var(--text); border-radius: 2px; }
-      @media (max-width: 1020px) {
+      @media (max-width: 1220px) {
         .burger { display: flex; }
         .links {
           position: absolute;
