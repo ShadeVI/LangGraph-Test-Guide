@@ -46,6 +46,6 @@ def build_resilient_client(settings: Settings) -> ResilientLLMClient:
     # Aviso único de configuración (no se repite en cada llamada).
     if not settings.groq_api_key:
         logger.warning("GROQ_API_KEY ausente: Groq se omitirá en cada fallback.")
-    if not settings.google_api_key:
-        logger.warning("GOOGLE_API_KEY ausente: Gemini se omitirá en cada fallback.")
+    if not settings.gemini_api_key:
+        logger.warning("GEMINI_API_KEY ausente: Gemini se omitirá en cada fallback.")
     return ResilientLLMClient(strategies)

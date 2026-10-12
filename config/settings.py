@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,7 +17,8 @@ class Settings(BaseSettings):
 
     Attributes:
         groq_api_key: API key de Groq (opcional; si falta, el proveedor falla con gracia).
-        google_api_key: API key de Google Gemini (opcional).
+        gemini_api_key: API key de Gemini de AI Studio (opcional; vale GEMINI_API_KEY
+            o la clásica GOOGLE_API_KEY como fallback).
         groq_model: Modelo de Groq por defecto.
         gemini_model: Modelo de Gemini por defecto.
         ollama_model: Modelo local de Ollama por defecto.
@@ -35,7 +36,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
-    google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
+    gemini_api_key: str = Field(
+        default="", validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY")
+    )
 
     groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
     gemini_model: str = Field(default="gemini-flash-latest", alias="GEMINI_MODEL")

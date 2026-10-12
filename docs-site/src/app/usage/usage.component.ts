@@ -94,7 +94,7 @@ MAX_REVISIONS=2
 <span class="c"># Para la API en modo live, añade en el mismo .env:</span>
 API_MODE=live
 
-<span class="c"># Con nube, añade además: GROQ_API_KEY=…  GOOGLE_API_KEY=…</span></pre>
+<span class="c"># Con nube, añade además: GROQ_API_KEY=…  GEMINI_API_KEY=…</span></pre>
             <div class="callout ok">
               <strong>Sin keys no pasa nada:</strong> Groq y Gemini se omiten con un aviso único
               al arrancar y todo lo resuelve Ollama. Es el setup perfecto para aprender gratis.
@@ -264,7 +264,7 @@ print(final[<span class="s">"errors"</span>])          <span class="c"># fallos 
 export class UsageSectionComponent {
   readonly env: string[][] = [
     ['GROQ_API_KEY', '—', 'Proveedor prioritario (nube)'],
-    ['GOOGLE_API_KEY', '—', 'Segundo en el fallback (nube)'],
+    ['GEMINI_API_KEY', '—', 'Segundo en el fallback (nube; vale GOOGLE_API_KEY)'],
     ['GROQ_MODEL / GEMINI_MODEL', 'llama-3.3-70b… / gemini-flash-latest', 'Modelos por proveedor'],
     ['OLLAMA_MODEL / OLLAMA_BASE_URL', 'llama3.1 / localhost:11434', 'Respaldo local sin key'],
     ['OLLAMA_NUM_PREDICT', '1024', 'Tope de tokens por llamada (imprescindible en CPU)'],

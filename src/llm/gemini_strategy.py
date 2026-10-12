@@ -36,7 +36,7 @@ def _client(settings: Settings) -> Any:
     """
     from google import genai
 
-    return genai.Client(api_key=settings.google_api_key)
+    return genai.Client(api_key=settings.gemini_api_key)
 
 
 def _gen_config(settings: Settings, tools: list[Any] | None = None) -> Any:
@@ -151,8 +151,8 @@ class GeminiStrategy(LLMStrategy):
         Raises:
             LLMProviderError: Si falta la API key o la API falla.
         """
-        if not self._settings.google_api_key:
-            raise LLMConfigurationError("GOOGLE_API_KEY no configurada (proveedor omitido).")
+        if not self._settings.gemini_api_key:
+            raise LLMConfigurationError("GEMINI_API_KEY no configurada (proveedor omitido).")
         try:
             response = _client(self._settings).models.generate_content(
                 model=self._settings.gemini_model,
@@ -170,8 +170,8 @@ class GeminiStrategy(LLMStrategy):
         self, messages: list[BaseMessage], tools: list[Any]
     ) -> AIMessage:
         """Invoca a Gemini con function declarations (thinking desactivado)."""
-        if not self._settings.google_api_key:
-            raise LLMConfigurationError("GOOGLE_API_KEY no configurada (proveedor omitido).")
+        if not self._settings.gemini_api_key:
+            raise LLMConfigurationError("GEMINI_API_KEY no configurada (proveedor omitido).")
         try:
             system, contents = _to_contents(messages)
             config = _gen_config(self._settings, tools)

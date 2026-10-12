@@ -46,7 +46,7 @@ python-langGraph/
 
 ```powershell
 pip install -r requirements.txt
-Copy-Item .env.example .env   # y rellena GROQ_API_KEY / GOOGLE_API_KEY
+Copy-Item .env.example .env   # y rellena GROQ_API_KEY / GEMINI_API_KEY
 # Ollama (opcional, respaldo local): ollama serve; ollama pull llama3.1
 ```
 
