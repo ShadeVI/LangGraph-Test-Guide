@@ -5,7 +5,7 @@ import { RevealDirective } from '../shared/reveal.directive';
   selector: 'app-section-mcp',
   imports: [RevealDirective],
   template: `
-    <section id="mcp" class="section">
+    <section id="mcp" class="section roomy">
       <div class="container">
         <div appReveal>
           <span class="kicker">08 · Protocolo</span>
@@ -92,7 +92,14 @@ python -m mcp_server.server</pre>
   `,
   styles: [
     `
-      h3 { margin-top: 1.6rem; }
+      .roomy { padding: 5.5rem 0 4.5rem; }
+      .roomy .lead { line-height: 1.85; margin-bottom: 1.5rem; }
+      .roomy .card { padding: 1.5rem 1.6rem; }
+      .roomy .card p { line-height: 1.8; margin-bottom: 0.9rem; }
+      .roomy table.doc-table th, .roomy table.doc-table td { padding: 0.9rem 1rem; }
+      .roomy pre.code { padding: 1.3rem 1.4rem; line-height: 1.75; margin: 1.2rem 0; }
+      .roomy .callout { padding: 1.1rem 1.4rem; margin: 1.5rem 0; line-height: 1.75; }
+      h3 { margin-top: 2.2rem; margin-bottom: 1.1rem; }
       code { font-family: var(--mono); font-size: 0.82em; color: var(--accent-2); }
     `,
   ],
