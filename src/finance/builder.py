@@ -27,11 +27,13 @@ ROUTE_TOOLS = "tools"
 ROUTE_REPORTER = "reporter"
 
 
-def make_finance_router(max_tool_iters: int = MAX_TOOL_ITERATIONS) -> Callable[[FinanceState], str]:
+def make_finance_router(max_tool_iters: int = MAX_TOOL_ITERATIONS, log: bool = True) -> Callable[[FinanceState], str]:
     """Crea el enrutado analyst → tools|reporter.
 
     Args:
         max_tool_iters: Vueltas máximas del loop de tools.
+        log: False cuando solo se narra (streaming) para no duplicar el log
+            que ya emite el router real al ejecutar la arista.
 
     Returns:
         Función `estado -> "tools" | "reporter"` con logging de la decisión.
@@ -46,14 +48,16 @@ def make_finance_router(max_tool_iters: int = MAX_TOOL_ITERATIONS) -> Callable[[
         wants_tools = isinstance(last, AIMessage) and bool(last.tool_calls)
         used = state.get("tool_iterations", 0)
         if wants_tools and used < max_tool_iters:
-            logger.info("Enrutado finance: analyst -> tools (vuelta %d/%d).", used + 1, max_tool_iters)
+            if log:
+                logger.info("Enrutado finance: analyst -> tools (vuelta %d/%d).", used + 1, max_tool_iters)
             return ROUTE_TOOLS
         if wants_tools:
-            logger.warning(
-                "Enrutado finance: analyst -> reporter (tope de %d iteraciones; se informa sin más tools).",
-                max_tool_iters,
-            )
-        else:
+            if log:
+                logger.warning(
+                    "Enrutado finance: analyst -> reporter (tope de %d iteraciones; se informa sin más tools).",
+                    max_tool_iters,
+                )
+        elif log:
             logger.info("Enrutado finance: analyst -> reporter (sin tool_calls).")
         return ROUTE_REPORTER
 

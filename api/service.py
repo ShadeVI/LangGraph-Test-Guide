@@ -49,6 +49,7 @@ def to_response(query: str, mode: str, final: GraphState) -> RunResponse:
     return RunResponse(
         query=query,
         mode=mode,
+        kind="report",
         final_report=final.get("final_report", ""),
         path=list(final.get("path", [])),
         providers_used=list(final.get("providers_used", [])),
@@ -158,7 +159,7 @@ def stream_pipeline(query: str, max_revisions: int, settings: Settings) -> Itera
     llm, mode = resolve_client(settings)
     logger.info("API: streaming %s de %r.", mode, query)
     graph = build_graph_with_llm(llm, max_revisions)
-    yield _sse("start", {"query": query, "mode": mode, "max_revisions": max_revisions, "entry": ENTRY_POINT})
+    yield _sse("start", {"query": query, "mode": mode, "max_revisions": max_revisions, "entry": ENTRY_POINT, "label": f'"{query}" (modo {mode}, máx. {max_revisions} revisiones)'})
     merged: dict[str, Any] = {"query": query}
     try:
         for chunk in graph.stream(initial_state(query)):
@@ -177,6 +178,7 @@ def stream_pipeline(query: str, max_revisions: int, settings: Settings) -> Itera
                     # Estado post-nodo (merged ya incorpora este patch):
                     # es exactamente lo que leerá el siguiente agente.
                     "snapshot": {
+                        "kind": "report",
                         "query": query,
                         "research_points": merged.get("research_points", []),
                         "draft": merged.get("draft", ""),

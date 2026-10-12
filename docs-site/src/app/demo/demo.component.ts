@@ -2,7 +2,7 @@ import { Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@an
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RevealDirective } from '../shared/reveal.directive';
-import { ApiService, FinanceResult, RunResult, StateSnapshot } from './api.service';
+import { ApiService, FinanceResult, FinanceSnapshot, RunResult, StateSnapshot } from './api.service';
 
 interface TimelineEvent {
   node: string;
@@ -16,6 +16,8 @@ interface HistoryLine {
   kind: 'start' | 'node' | 'route' | 'done' | 'error';
   text: string;
   at: string;
+  /** Nodo al que pertenece la línea (para el detalle clicable). */
+  node?: string;
 }
 
 type Status = 'idle' | 'running' | 'done' | 'error';
@@ -24,9 +26,15 @@ const NODE_ICONS: Record<string, string> = {
   researcher: '🔍',
   writer: '✍️',
   editor: '📝',
+  loader: '📥',
+  extractor: '🧮',
+  analyst: '🕵️',
+  tools: '🛠️',
+  reporter: '📊',
 };
 
 const FLOW = ['researcher', 'writer', 'editor'] as const;
+const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as const;
 
 @Component({
   selector: 'app-page-demo',
@@ -143,19 +151,22 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
               }
             </div>
             <div class="flow">
-              @for (n of flowNodes; track n; let i = $index) {
+              @for (n of flowNodes(); track n; let i = $index) {
                 <div class="fnode" [class]="nodeClass(n)">
                   <span class="f-ico">{{ icon(n) }}</span>
                   <strong>{{ n }}</strong>
                   @if (count(n) > 1) { <em>×{{ count(n) }}</em> }
                   @else if (count(n) === 1) { <em>✓</em> }
                 </div>
-                @if (i < flowNodes.length - 1) {
+                @if (i < flowNodes().length - 1) {
                   <div class="flink" [class.lit]="lit(i)"></div>
                 }
               }
             </div>
-            <div class="loop-note">↩ arista condicional: editor —REVISAR→ writer · —APROBADO→ END</div>
+            <div class="loop-note">
+              @if (flowNodes()[0] === 'loader') { ↩ loop: analyst ⇄ tools (máx. 5) · analyst —sin tools→ reporter }
+              @else { ↩ arista condicional: editor —REVISAR→ writer · —APROBADO→ END }
+            </div>
           </div>
         }
 
@@ -167,13 +178,57 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
             </h3>
             <div class="console" #consoleBox>
               @for (h of history(); track h.n) {
-                <div class="hline {{ h.kind }}">
+                <div class="hline {{ h.kind }}" [class.dim]="selectedNode() && h.node !== selectedNode()">
                   <span class="h-n">{{ h.n }}</span>
                   <span class="h-t">{{ h.text }}</span>
                   <span class="h-at">{{ h.at }}</span>
                 </div>
               }
             </div>
+          </div>
+        }
+
+        @if (selectedNode(); as sel) {
+          <div class="card node-detail fade-swap">
+            <div class="detail-head">
+              <h3>{{ icon(sel) }} {{ sel }} — detalle</h3>
+              <button class="btn ghost sm" (click)="selectNode(sel)">✕ cerrar</button>
+            </div>
+            @if (nodeLines(sel).length === 0) {
+              <p>Todavía no hay líneas de este nodo. Ejecuta una demo para verlas aquí.</p>
+            } @else {
+              <ul class="detail-list">
+                @for (h of nodeLines(sel); track h.n) {
+                  <li><span class="h-n">{{ h.n }}</span> {{ h.text }} <span class="h-at">{{ h.at }}</span></li>
+                }
+              </ul>
+              <p class="hint">Pulsa otro chip de ruta para cambiar de nodo, o el mismo para cerrar.</p>
+            }
+          </div>
+        }
+
+        @if (financeSnapshot(); as fs) {
+          <div class="card">
+            <h3>💰 Estado financiero
+              @if (live() && status() === 'running') { <span class="tag">en vivo</span> }
+              @else { <span class="tag">final</span> }
+            </h3>
+            <div class="state-grid">
+              <div><span>Fichero</span><strong>{{ fs.filename }}</strong></div>
+              <div><span>Filas</span><strong>{{ fs.row_count }}</strong></div>
+              <div><span>Tasa EUR→USD</span><strong>@if (fs.fx_rate) { {{ fs.fx_rate }} ({{ fs.fx_date }}) } @else { — }</strong></div>
+              <div><span>Categorías</span><strong>{{ totalsEntries(fs).length }}</strong></div>
+              <div><span>Alertas</span><strong>{{ fs.alerts.length }}</strong></div>
+              <div><span>Etapa</span><strong>{{ fs.current_step }}</strong></div>
+            </div>
+            <details>
+              <summary>Totales por categoría — lo que lee el analista</summary>
+              <ul>
+                @for (t of totalsEntries(fs); track t[0]) {
+                  <li><strong>{{ t[0] }}</strong>: {{ fmt(t[1].EUR) }} EUR @if (t[1].USD) { + {{ fmt(t[1].USD) }} USD }</li>
+                }
+              </ul>
+            </details>
           </div>
         }
 
@@ -230,7 +285,7 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
               <h3>Ruta recorrida</h3>
               <div class="route">
                 @for (n of r.path; track $index; let last = $last) {
-                  <span class="chip">{{ icon(n) }} {{ n }}</span>
+                  <button class="chip" [class.selected]="selectedNode() === n" (click)="selectNode(n)" title="Ver detalle del nodo">{{ icon(n) }} {{ n }}</button>
                   @if (!last) { <span class="arrow">→</span> }
                 }
               </div>
@@ -275,10 +330,16 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
             </label>
             <div class="btns">
               <div class="mode">
-                <button class="btn primary" (click)="analyzeFinance()" [disabled]="financeStatus() === 'running'">
-                  @if (financeStatus() === 'running') { ⏳ Analizando… } @else { 💰 Analizar gastos }
+                <button class="btn primary" (click)="runFinanceStream()" [disabled]="busy() || financeStatus() === 'running'">
+                  ⚡ Transmitir en vivo
                 </button>
-                <small>POST multipart: sin SSE en este flujo (v1).</small>
+                <small>SSE: cada nodo aparece <em>mientras trabaja</em>, con su resumen.</small>
+              </div>
+              <div class="mode">
+                <button class="btn ghost" (click)="analyzeFinance()" [disabled]="financeStatus() === 'running'">
+                  @if (financeStatus() === 'running') { ⏳ Analizando… } @else { 💰 Analizar directo }
+                </button>
+                <small>POST: sin línea de tiempo; solo el dossier final.</small>
               </div>
             </div>
           </div>
@@ -290,7 +351,7 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
             <h3>Ruta del análisis</h3>
             <div class="route">
               @for (n of fr.path; track $index; let last = $last) {
-                <span class="chip">{{ n }}</span>
+                <button class="chip" [class.selected]="selectedNode() === n" (click)="selectNode(n)" title="Ver detalle del nodo">{{ icon(n) }} {{ n }}</button>
                 @if (!last) { <span class="arrow">→</span> }
               }
             </div>
@@ -441,6 +502,22 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
         font-family: var(--mono); font-size: 0.8rem; font-weight: 700;
         background: rgba(124, 157, 255, 0.12);
         border: 1px solid var(--line); border-radius: 8px; padding: 0.3rem 0.7rem;
+        color: var(--text); cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+      }
+      button.chip:hover { border-color: var(--accent-2); transform: translateY(-1px); }
+      button.chip.selected { border-color: var(--accent-2); background: rgba(94, 234, 212, 0.14); }
+      .hline.dim { opacity: 0.35; }
+      .node-detail { border-color: rgba(94, 234, 212, 0.4); }
+      .detail-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+      .detail-head h3 { margin: 0; }
+      .btn.sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+      .detail-list { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+      .detail-list li {
+        font-family: var(--mono); font-size: 0.8rem;
+        border: 1px solid var(--line); border-radius: 8px;
+        padding: 0.45rem 0.7rem; background: rgba(8, 13, 29, 0.55);
+        overflow-wrap: anywhere;
       }
       .arrow { color: var(--accent-2); font-weight: 800; }
       .narr ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.45rem; }
@@ -462,7 +539,8 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
 })
 export class DemoPage implements OnDestroy {
   readonly api = inject(ApiService);
-  readonly flowNodes = [...FLOW];
+  readonly flowNodes = signal<string[]>([...FLOW]);
+  readonly selectedNode = signal<string | null>(null);
 
   readonly query = signal('¿Qué es LangGraph y para qué sirve?');
   readonly maxRev = signal(2);
@@ -475,6 +553,7 @@ export class DemoPage implements OnDestroy {
   readonly events = signal<TimelineEvent[]>([]);
   readonly history = signal<HistoryLine[]>([]);
   readonly snapshot = signal<StateSnapshot | null>(null);
+  readonly financeSnapshot = signal<FinanceSnapshot | null>(null);
   /** Nodo que está trabajando AHORA (inferido del destino de la ruta). */
   readonly activeNode = signal<string | null>(null);
   readonly result = signal<RunResult | null>(null);
@@ -518,6 +597,25 @@ export class DemoPage implements OnDestroy {
     return NODE_ICONS[node] ?? '•';
   }
 
+  /** Líneas del historial del nodo seleccionado (detalle clicable). */
+  nodeLines(node: string): HistoryLine[] {
+    return this.history().filter((h) => h.node === node);
+  }
+
+  /** Entradas de totales para la plantilla. */
+  totalsEntries(fs: FinanceSnapshot): Array<[string, { EUR?: number; USD?: number }]> {
+    return Object.entries(fs.totals ?? {}) as Array<[string, { EUR?: number; USD?: number }]>;
+  }
+
+  /** Número con 2 decimales (tolerante a ausentes). */
+  fmt(value: number | undefined): string {
+    return (value ?? 0).toFixed(2);
+  }
+
+  selectNode(node: string): void {
+    this.selectedNode.set(this.selectedNode() === node ? null : node);
+  }
+
   count(node: string): number {
     return this.events().filter((e) => e.node === node).length;
   }
@@ -531,7 +629,7 @@ export class DemoPage implements OnDestroy {
   }
 
   lit(linkIndex: number): boolean {
-    const order = this.flowNodes;
+    const order = this.flowNodes();
     return this.count(order[linkIndex]) > 0 && this.count(order[linkIndex + 1]) > 0;
   }
 
@@ -587,28 +685,33 @@ export class DemoPage implements OnDestroy {
     this.timer = undefined;
   }
 
-  private reset(live: boolean): void {
+  private reset(live: boolean, stages: string[] = [...FLOW]): void {
     this.source?.close();
     this.stopTimer();
     this.events.set([]);
     this.history.set([]);
     this.snapshot.set(null);
+    this.financeSnapshot.set(null);
+    this.selectedNode.set(null);
     this.activeNode.set(null);
     this.seq = 0;
     this.result.set(null);
     this.error.set(null);
+    this.financeResult.set(null);
+    this.financeError.set(null);
+    this.flowNodes.set(stages);
     this.live.set(live);
     this.status.set('running');
     this.startTimer();
   }
 
   /** Añade una línea al historial y desplaza la consola al final. */
-  private pushHistory(kind: HistoryLine['kind'], text: string): void {
+  private pushHistory(kind: HistoryLine['kind'], text: string, node?: string): void {
     this.seq += 1;
     const n = this.seq;
     this.history.update((list) => [
       ...list,
-      { n, kind, text, at: new Date().toLocaleTimeString() },
+      { n, kind, text, at: new Date().toLocaleTimeString(), node },
     ]);
     setTimeout(() => {
       const box = this.consoleBox()?.nativeElement;
@@ -635,16 +738,14 @@ export class DemoPage implements OnDestroy {
 
     es.addEventListener('start', (raw) => {
       const data = JSON.parse((raw as MessageEvent).data) as {
-        query: string;
+        query?: string;
         mode: string;
-        max_revisions: number;
+        max_revisions?: number;
         entry?: string;
+        label?: string;
       };
       this.activeNode.set(data.entry ?? null);
-      this.pushHistory(
-        'start',
-        `▶ inicio: "${data.query}" (modo ${data.mode}, máx. ${data.max_revisions} revisiones)`,
-      );
+      this.pushHistory('start', `▶ inicio: ${data.label ?? JSON.stringify(data)}`);
     });
 
     es.addEventListener('node', (raw) => {
@@ -652,7 +753,7 @@ export class DemoPage implements OnDestroy {
         node: string;
         summary?: string;
         providers_used?: string[];
-        snapshot?: StateSnapshot;
+        snapshot?: StateSnapshot | FinanceSnapshot;
       };
       const providers = data.providers_used ?? [];
       this.events.update((list) => [
@@ -664,8 +765,14 @@ export class DemoPage implements OnDestroy {
           at: new Date().toLocaleTimeString(),
         },
       ]);
-      if (data.snapshot) this.snapshot.set(data.snapshot);
-      this.pushHistory('node', `▸ ${data.node} — ${data.summary ?? ''}`);
+      if (data.snapshot) {
+        if ((data.snapshot as FinanceSnapshot).kind === 'finance') {
+          this.financeSnapshot.set(data.snapshot as FinanceSnapshot);
+        } else {
+          this.snapshot.set(data.snapshot as StateSnapshot);
+        }
+      }
+      this.pushHistory('node', `▸ ${data.node} — ${data.summary ?? ''}`, data.node);
     });
 
     es.addEventListener('route', (raw) => {
@@ -677,18 +784,29 @@ export class DemoPage implements OnDestroy {
       // La ruta anuncia quién EMPIEZA a trabajar ahora (el evento de nodo
       // solo llegará cuando termine, segundos/minutos después en live).
       this.activeNode.set(data.to === 'end' ? null : data.to);
-      this.pushHistory('route', `↩ ${data.from} → ${data.to} · ${data.detail}`);
+      this.pushHistory('route', `↩ ${data.from} → ${data.to} · ${data.detail}`, data.to === 'end' ? undefined : data.to);
     });
 
     es.addEventListener('done', (raw) => {
-      const r = JSON.parse((raw as MessageEvent).data) as RunResult;
-      this.result.set(r);
-      this.activeNode.set(null);
-      this.snapshot.set(this.snapshotFrom(r));
-      this.pushHistory(
-        'done',
-        `■ fin — ${r.path.length} pasos, ${r.revision_count} revisión(es), informe de ${r.final_report.length} caracteres`,
-      );
+      const data = JSON.parse((raw as MessageEvent).data) as RunResult | FinanceResult;
+      if ((data as FinanceResult).kind === 'finance') {
+        const fr = data as FinanceResult;
+        this.financeResult.set(fr);
+        this.financeSnapshot.set(this.financeSnapshotFrom(fr));
+        this.pushHistory(
+          'done',
+          `■ fin — ${fr.path.length} pasos, ${fr.tool_iterations} vuelta(s) tools, informe de ${fr.final_report.length} caracteres`,
+        );
+      } else {
+        const r = data as RunResult;
+        this.result.set(r);
+        this.activeNode.set(null);
+        this.snapshot.set(this.snapshotFrom(r));
+        this.pushHistory(
+          'done',
+          `■ fin — ${r.path.length} pasos, ${r.revision_count} revisión(es), informe de ${r.final_report.length} caracteres`,
+        );
+      }
       this.finish('done');
     });
 
@@ -713,7 +831,80 @@ export class DemoPage implements OnDestroy {
     };
   }
 
-  /** Reconstruye el snapshot final desde un RunResponse (modo POST o done). */  private snapshotFrom(r: RunResult): StateSnapshot {
+  /** Reconstruye el snapshot financiero final desde un FinanceResult. */
+  private financeSnapshotFrom(r: FinanceResult): FinanceSnapshot {
+    return {
+      kind: 'finance',
+      filename: r.filename,
+      row_count: r.row_count,
+      totals: r.totals,
+      fx_rate: r.fx_rate,
+      fx_date: r.fx_date,
+      alerts: [...r.budget_alerts],
+      findings: [...r.findings],
+      path: [...r.path],
+      providers_used: [...r.providers_used],
+      errors: [...r.errors],
+      current_step: r.current_step,
+    };
+  }
+
+  async runFinanceStream(): Promise<void> {
+    this.reset(true, [...FINANCE_FLOW]);
+    try {
+      const { job_id } = await this.api.uploadFinanceJob(this.financeFile());
+      const es = new EventSource(this.api.financeStreamUrl(job_id));
+      this.source = es;
+      es.addEventListener('start', (raw) => {
+        const data = JSON.parse((raw as MessageEvent).data) as { entry?: string; label?: string };
+        this.activeNode.set(data.entry ?? null);
+        this.pushHistory('start', `▶ inicio: ${data.label ?? 'análisis financiero'}`);
+      });
+      es.addEventListener('node', (raw) => {
+        const data = JSON.parse((raw as MessageEvent).data) as {
+          node: string; summary?: string; providers_used?: string[]; snapshot?: FinanceSnapshot;
+        };
+        const providers = data.providers_used ?? [];
+        this.events.update((list) => [...list, {
+          node: data.node,
+          summary: data.summary ?? data.node,
+          provider: providers.length > 0 ? providers[providers.length - 1] : '?',
+          at: new Date().toLocaleTimeString(),
+        }]);
+        if (data.snapshot) this.financeSnapshot.set(data.snapshot);
+        this.pushHistory('node', `▸ ${data.node} — ${data.summary ?? ''}`, data.node);
+      });
+      es.addEventListener('route', (raw) => {
+        const data = JSON.parse((raw as MessageEvent).data) as { from: string; to: string; detail: string };
+        this.activeNode.set(data.to === 'end' ? null : data.to);
+        this.pushHistory('route', `↩ ${data.from} → ${data.to} · ${data.detail}`, data.to === 'end' ? undefined : data.to);
+      });
+      es.addEventListener('done', (raw) => {
+        const fr = JSON.parse((raw as MessageEvent).data) as FinanceResult;
+        this.financeResult.set(fr);
+        this.financeSnapshot.set(this.financeSnapshotFrom(fr));
+        this.pushHistory('done', `■ fin — ${fr.path.length} pasos, informe de ${fr.final_report.length} caracteres`);
+        this.finish('done');
+      });
+      const onError = (msg: string): void => {
+        this.financeError.set(msg);
+        this.pushHistory('error', `✖ ${msg}`);
+        this.finish('error');
+      };
+      es.addEventListener('error', (raw) => {
+        const data = (raw as MessageEvent).data;
+        onError(data ? String(data) : 'La API no responde. Arráncala con: python -m uvicorn api.main:app --port 8000');
+      });
+      es.onerror = (): void => {
+        if (this.status() === 'running' && !this.financeResult()) {
+          onError('Sin conexión con la API. Arráncala con: python -m uvicorn api.main:app --port 8000');
+        }
+      };
+    } catch {
+      this.financeError.set('No se pudo subir el CSV. Comprueba que la API responde.');
+      this.finish('error');
+    }
+  }  private snapshotFrom(r: RunResult): StateSnapshot {
     return {
       query: r.query,
       research_points: r.research_points,

@@ -39,6 +39,7 @@ export interface FinanceResult {
   filename: string;
   used_mock: boolean;
   mode: string;
+  kind: string;
   row_count: number;
   totals: Record<string, Record<string, number>>;
   fx_rate: number | null;
@@ -52,6 +53,21 @@ export interface FinanceResult {
   providers_used: string[];
   errors: string[];
   tool_iterations: number;
+  current_step: string;
+}
+
+export interface FinanceSnapshot {
+  kind: 'finance';
+  filename: string;
+  row_count: number;
+  totals: Record<string, Record<string, number>>;
+  fx_rate: number | null;
+  fx_date: string;
+  alerts: string[];
+  findings: string[];
+  path: string[];
+  providers_used: string[];
+  errors: string[];
   current_step: string;
 }
 
@@ -87,5 +103,15 @@ export class ApiService {
     const data = new FormData();
     if (file) data.append('file', file, file.name);
     return firstValueFrom(this.http.post<FinanceResult>(`${this.baseUrl()}/api/finance/run`, data));
+  }
+
+  uploadFinanceJob(file: File | null): Promise<{ job_id: string }> {
+    const data = new FormData();
+    if (file) data.append('file', file, file.name);
+    return firstValueFrom(this.http.post<{ job_id: string }>(`${this.baseUrl()}/api/finance/jobs`, data));
+  }
+
+  financeStreamUrl(jobId: string): string {
+    return `${this.baseUrl()}/api/finance/stream?job_id=${encodeURIComponent(jobId)}`;
   }
 }

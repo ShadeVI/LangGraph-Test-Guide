@@ -36,6 +36,7 @@ class RunResponse(BaseModel):
 
     query: str
     mode: str
+    kind: str = "report"
     final_report: str
     path: list[str] = Field(default_factory=list)
     providers_used: list[str] = Field(default_factory=list)

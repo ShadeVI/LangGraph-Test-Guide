@@ -194,6 +194,48 @@ class TestFinanceApi(unittest.TestCase):
         )
         self.assertEqual(res.status_code, 422)
 
+    def test_jobs_y_stream_mock(self) -> None:
+        import json
+        import os
+
+        os.environ["API_MODE"] = "demo"
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+        from config.settings import get_settings
+
+        get_settings.cache_clear()
+        client = TestClient(app)
+
+        job = client.post("/api/finance/jobs")
+        self.assertEqual(job.status_code, 200)
+        job_id = job.json()["job_id"]
+        self.assertTrue(job_id)
+
+        with client.stream("GET", "/api/finance/stream", params={"job_id": job_id}) as res:
+            self.assertEqual(res.status_code, 200)
+            self.assertIn("text/event-stream", res.headers["content-type"])
+            text = res.read().decode()
+        self.assertIn("event: start", text)
+        self.assertIn("event: node", text)
+        self.assertIn("event: route", text)
+        self.assertIn('"to": "reporter"', text)
+        self.assertIn('"kind": "finance"', text)
+        self.assertIn("event: done", text)
+        done_line = next(ln for ln in text.splitlines() if ln.startswith("data: ") and "Informe de gastos" in ln)
+        done = json.loads(done_line[len("data: "):])
+        self.assertTrue(done["used_mock"])
+        self.assertTrue(any("COMIDA" in a for a in done["budget_alerts"]))
+
+    def test_stream_job_desconocido_404(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        client = TestClient(app)
+        res = client.get("/api/finance/stream", params={"job_id": "noexiste"})
+        self.assertEqual(res.status_code, 404)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

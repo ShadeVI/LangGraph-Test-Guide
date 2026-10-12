@@ -30,6 +30,7 @@ class FinanceResponse(BaseModel):
     filename: str
     used_mock: bool = False
     mode: str
+    kind: str = "finance"
     row_count: int = 0
     totals: dict[str, dict[str, float]] = Field(default_factory=dict)
     fx_rate: float | None = None

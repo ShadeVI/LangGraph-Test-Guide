@@ -108,6 +108,8 @@ python -m uvicorn api.main:app --port 8000   # demo (API_MODE=demo en .env)
 | POST | `/api/run` | Ejecuta el grafo; devuelve informe, ruta, proveedores y errores |
 | GET | `/api/run/stream` | SSE: `start` → (`node` → `route`)* → `done` (ideal para la demo web) |
 | POST | `/api/finance/run` | Sube un CSV de gastos (multipart `file`; sin fichero usa el mock) → informe Markdown + trazabilidad |
+| POST | `/api/finance/jobs` | Valida y guarda el CSV → `{job_id}` para el streaming |
+| GET | `/api/finance/stream?job_id=…` | SSE del análisis: `start` → (`node` → `route`)* → `done` (mismos componentes web) |
 
 ## Resiliencia (fallback) y ciclo de revisión
 
