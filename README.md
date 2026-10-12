@@ -6,29 +6,24 @@ Pipeline resiliente con **fallback de proveedores** (Groq → Gemini → Ollama)
 
 ```
 python-langGraph/
-├── main.py                    # CLI: --query / --output, imprime + guarda Markdown
-├── config/
-│   ├── settings.py            # Pydantic Settings (.env) — DIP
-│   └── logging_config.py      # logging estándar (INFO/WARNING/ERROR), sin prints
-├── src/
-│   ├── state.py               # GraphState (TypedDict estricto) + initial_state()
-│   ├── llm/                   # Strategy Pattern
-│   │   ├── base.py            # LLMStrategy (ABC) + LLMProviderError
-│   │   ├── groq_strategy.py   # Prioridad 1
-│   │   ├── gemini_strategy.py # Prioridad 2
-│   │   ├── ollama_strategy.py # Prioridad 3 (local, sin key)
-│   │   ├── resilient_client.py# Fallback: WARNING + siguiente proveedor
-│   │   └── factory.py         # Orden Groq→Gemini→Ollama
-│   ├── agents/                # SRP: 1 agente = 1 responsabilidad
-│   │   ├── base_agent.py      # Template Method + trazabilidad (duración, path)
-│   │   ├── analyzer.py      # Consulta → `research_points: list[str]`
-│   │   ├── synthesizer.py          # Puntos (+feedback) → `draft`, cuenta revisiones
-│   │   └── reviewer.py        # Borrador → veredicto + `final_report` (Markdown)
-│   └── graph/
-│       ├── nodes.py           # Adaptadores puros para StateGraph
-│       └── builder.py         # analyzer → synthesizer → reviewer -[REVISAR]→ synthesizer / -[APROBADO]→ END
-└── tests/test_pipeline.py     # Tests con dobles (sin red ni keys)
-└── demo_paths.py              # 3 inputs que recorren rutas distintas del grafo
+├── backend/                     # Todo Python (trabaja siempre desde aquí)
+│   ├── main.py                  # CLI: --query / --output, imprime + guarda Markdown
+│   ├── config/                  # settings.py (.env) + logging_config.py
+│   ├── src/
+│   │   ├── state.py             # GraphState (TypedDict estricto)
+│   │   ├── llm/                 # Strategy: groq → gemini → ollama + fallback
+│   │   ├── agents/              # analyzer, synthesizer, reviewer (SRP)
+│   │   ├── graph/               # StateGraph + arista condicional
+│   │   └── finance/             # 2º grafo: loader → extractor → analyst ⇄ tools → reporter
+│   ├── mcp_server/              # Servidor MCP: presupuestos + tasa Frankfurter
+│   ├── data/                    # mock_gastos.csv + budgets.json
+│   ├── api/                     # FastAPI: report pipeline + /finance/*
+│   ├── scripts/demo_paths.py    # 3 inputs que recorren rutas distintas
+│   ├── tests/                   # pipeline (27) + api (6) + finance (14)
+│   ├── requirements.txt         # mínimos legibles
+│   ├── requirements-frozen.txt  # pines exactos verificados
+│   └── .env / .env.example
+└── docs-site/                   # Web Angular 22 (documentación + consola /demo)
 ```
 
 ## Principios aplicados
@@ -45,6 +40,7 @@ python-langGraph/
 ## Instalación
 
 ```powershell
+cd backend
 pip install -r requirements.txt
 Copy-Item .env.example .env   # y rellena GROQ_API_KEY / GEMINI_API_KEY
 # Ollama (opcional, respaldo local): ollama serve; ollama pull qwen3.5:4b
@@ -62,18 +58,21 @@ Copy-Item .env.example .env   # y rellena GROQ_API_KEY / GEMINI_API_KEY
 ## Uso
 
 ```powershell
+cd backend
 python main.py --query "¿Qué es LangGraph y para qué sirve?" --output output/informe.md
 python main.py   # modo interactivo
-python tests/test_pipeline.py   # 15 tests sin red (dobles deterministas)
+python tests/test_pipeline.py   # 27 tests sin red (dobles deterministas)
 python tests/test_api.py        # 6 tests de la API REST (modo demo)
-python demo_paths.py            # 3 inputs de ejemplo: lineal, 1 revisión, fallback+tope
+python tests/test_finance.py    # 14 tests del flujo financiero (MCP real)
+python scripts/demo_paths.py    # 3 inputs de ejemplo: lineal, 1 revisión, fallback+tope
 ```
 
 ## Sitio de documentación (Angular 22, multipágina)
 
-Páginas con routing (`/`, `/langchain`, `/langgraph`, `/proyecto`, `/por-que`,
-`/uso`, `/ejemplos`) más la consola **`/demo`**, que ejecuta los agentes de verdad
-contra la API y muestra la línea de tiempo nodo a nodo por SSE:
+Páginas con routing (`/`, `/langchain`, `/langgraph`, `/proyecto`,
+`/uso`, `/ejemplos`) —`/proyecto` incluye las subsecciones ¿por qué LangGraph?,
+flujo financiero y ¿por qué MCP— más la consola **`/demo`**, que ejecuta los
+agentes de verdad contra la API y muestra la línea de tiempo nodo a nodo por SSE:
 
 ```powershell
 cd docs-site
@@ -95,7 +94,7 @@ El loop analyst↔tools está acotado (`MAX_TOOL_ITERATIONS=5`) y el informe
 Markdown lo compone un reporter determinista (sin llamada LLM: rápido y testeable).
 
 ```powershell
-python tests/test_finance.py   # 12 tests (MCP real por stdio incluido)
+python tests/test_finance.py   # 14 tests (MCP real por stdio incluido)
 ```
 
 ## API REST (FastAPI, `api/`)
@@ -105,6 +104,7 @@ Dos modos vía `API_MODE`: `demo` (LLM guionizado, sin keys, muestra el ciclo) y
 `live` (Groq → Gemini → Ollama reales). Auto-documentación en `/docs`.
 
 ```powershell
+cd backend
 pip install -r requirements.txt   # incluye fastapi, uvicorn y httpx
 python -m uvicorn api.main:app --port 8000   # demo (API_MODE=demo en .env)
 # live: pon API_MODE=live en tu .env (+ keys de nube si las tienes) y arranca igual

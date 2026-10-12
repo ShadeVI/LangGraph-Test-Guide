@@ -12,8 +12,8 @@ import { RevealDirective } from '../shared/reveal.directive';
           <h2>Prepara y prueba <span class="hl">todo, paso a paso</span></h2>
           <p class="lead">
             Sigue los pasos en orden y al final tendrás el pipeline, la API y la web
-            funcionando en tu PC. Todo se opera desde la raíz del repositorio
-            <code>python-langGraph</code> (el backend) y <code>docs-site/</code> (la web).
+            funcionando en tu PC. El repo se organiza en <code>backend/</code> (todo Python)
+            y <code>docs-site/</code> (la web): cada terminal trabaja en su carpeta.
           </p>
         </div>
 
@@ -79,7 +79,10 @@ ollama ps          <span class="c"># qué modelo está cargado y si usa CPU/GPU<
         <div class="grid2">
           <div appReveal>
             <h3>Paso 2 · Python y configuración (.env)</h3>
-            <pre class="code"><span class="c"># 1. Dependencias (incluye fastapi, uvicorn y httpx para la API)</span>
+            <pre class="code"><span class="c"># Todo lo Python se ejecuta desde backend/</span>
+cd backend
+
+<span class="c"># 1. Dependencias (incluye fastapi, uvicorn y httpx para la API)</span>
 pip install -r requirements.txt
 
 <span class="c"># 2. Crea tu .env a partir del ejemplo</span>
@@ -109,7 +112,7 @@ python main.py -q <span class="s">"¿Qué es LangGraph?"</span> -o output/inform
 python main.py
 
 <span class="c"># 3 inputs que recorren rutas distintas (lineal, revisión, fallback+tope)</span>
-python demo_paths.py
+python scripts/demo_paths.py
 
 <span class="c"># Tests: 21 del grafo + 6 de la API + 14 de finanzas (dobles, sin red ni keys)</span>
 python tests/test_pipeline.py
@@ -177,8 +180,8 @@ curl.exe -s -X POST http://localhost:8000/api/run -H <span class="s">"Content-Ty
 python -m uvicorn api.main:app --port 8000
 <span class="c"># Revisa que tu .env tenga: OLLAMA_MODEL=qwen3.5:4b y API_MODE=live</span>
 
-<span class="c"># Terminal 2: la web (primera vez: npm install)</span>
-cd docs-site
+<span class="c"># Terminal 2: la web (desde la raíz del repo)</span>
+cd ../docs-site
 npx ng serve --open   <span class="c"># http://localhost:4200/demo</span></pre>
             <div class="callout">
               <strong>En /demo:</strong> comprueba que el distintivo pone <code>● API live</code>,

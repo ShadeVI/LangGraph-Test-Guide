@@ -8,7 +8,7 @@ import { RevealDirective } from '../shared/reveal.directive';
     <section id="por-que" class="section alt">
       <div class="container">
         <div appReveal>
-          <span class="kicker">04 · Decisión de arquitectura</span>
+          <span class="kicker">Por qué LangGraph aquí</span>
           <h2>¿Por qué se usó <span class="hl">LangGraph</span>?</h2>
           <p class="lead">
             El problema encaja con la definición de LangGraph: un flujo por

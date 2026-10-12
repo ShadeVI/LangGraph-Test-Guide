@@ -8,7 +8,7 @@ import { RevealDirective } from '../shared/reveal.directive';
     <section id="mcp" class="section roomy">
       <div class="container">
         <div appReveal>
-          <span class="kicker">08 · Protocolo</span>
+          <span class="kicker">Por qué MCP aquí</span>
           <h2>¿Por qué <span class="hl">MCP</span>?</h2>
           <p class="lead">
             <strong>MCP (Model Context Protocol)</strong> es el estándar abierto (impulsado por

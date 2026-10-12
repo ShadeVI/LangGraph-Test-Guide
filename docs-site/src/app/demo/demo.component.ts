@@ -98,8 +98,8 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
           <p class="hint">Privacidad: esta página no contacta con ningún servicio hasta que pulses «Comprobar conexión» o ejecutes una demo.</p>
           @if (apiOk() === false) {
             <div class="callout warn">
-              <strong>La API no responde.</strong> Arráncala en una terminal desde la raíz
-              del proyecto Python:
+              <strong>La API no responde.</strong> Arráncala en una terminal desde la carpeta
+              <code>backend/</code> del proyecto Python:
               <pre class="code">python -m uvicorn api.main:app --port 8000   <span class="c"># modo demo, sin keys</span></pre>
             </div>
           }

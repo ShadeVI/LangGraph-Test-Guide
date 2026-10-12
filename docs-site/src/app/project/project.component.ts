@@ -1,9 +1,11 @@
 import { Component } from '@angular/core';
 import { RevealDirective } from '../shared/reveal.directive';
+import { WhySectionComponent } from '../why/why.component';
+import { McpSectionComponent } from '../mcp/mcp.component';
 
 @Component({
   selector: 'app-section-project',
-  imports: [RevealDirective],
+  imports: [RevealDirective, WhySectionComponent, McpSectionComponent],
   template: `
     <section id="proyecto" class="section">
       <div class="container">
@@ -114,6 +116,13 @@ import { RevealDirective } from '../shared/reveal.directive';
     errors: list[str]           <span class="c"># fallos recuperados</span>
     path: list[str]             <span class="c"># ruta recorrida</span>
     current_step: str           <span class="c"># etapa actual</span></pre>
+            <p class="lead" style="font-size: 0.93rem; margin-top: 1rem">
+              Y así se ve <strong>en plena ejecución</strong> (ejemplo realista: segundo paso por
+              el revisor tras un REVISAR por longitud). Fíjate en <code>path</code>: cuenta la
+              historia de la ruta; y en <code>providers_used</code>/<code>errors</code>: quién
+              respondió y qué se recuperó por el camino.
+            </p>
+            <pre class="code">{{ stateExample }}</pre>
           </div>
           <div appReveal [delay]="120">
             <h3>El fallback: si un proveedor falla, el siguiente lo intenta</h3>
@@ -135,6 +144,8 @@ import { RevealDirective } from '../shared/reveal.directive';
             </div>
           </div>
         </div>
+
+        <app-section-why />
 
         <div appReveal>
           <h3>Segundo flujo: análisis financiero (CSV + tools MCP)</h3>
@@ -169,6 +180,8 @@ import { RevealDirective } from '../shared/reveal.directive';
             <span class="tag">api/finance.py (jobs + stream + run)</span>
           </div>
         </div>
+
+        <app-section-mcp />
 
         <div appReveal>
           <h3>Cómo está construido el frontend (esta web)</h3>
@@ -257,6 +270,22 @@ es.<span class="f">addEventListener</span>(<span class="s">"node"</span>, e =&gt
   ],
 })
 export class ProjectSectionComponent {
+  /** Ejemplo de estado a mitad de ejecución (las llaves van en el TS, no en el HTML). */
+  readonly stateExample = `{
+  "query": "¿Qué es LangGraph?",
+  "research_points": ["Los grafos modelan flujos…", "…", "…"],  // 5 puntos
+  "draft": "Borrador Nº 2 de 1464 caracteres…",
+  "final_report": "# ¿Qué es LangGraph? …",  // 2021 caracteres
+  "needs_revision": false,
+  "revision_count": 1,
+  "reviewer_feedback": "",
+  "providers_used": ["gemini", "gemini", "gemini", "ollama", "ollama"],
+  "errors": ["[gemini] 503 UNAVAILABLE…"],
+  "path": ["analyzer", "synthesizer", "reviewer",
+           "synthesizer", "reviewer"],
+  "current_step": "done"
+}`;
+
   readonly journey = [
     {
       title: 'Escribes una pregunta',
