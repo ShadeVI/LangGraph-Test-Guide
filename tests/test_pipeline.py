@@ -198,6 +198,25 @@ class TestGeminiConverters(unittest.TestCase):
         self.assertEqual(cfg.thinking_config.thinking_budget, 0)
         self.assertIsNone(cfg.tools)
 
+    def test_root_message_extrae_error_api(self) -> None:
+        from src.llm.gemini_strategy import _root_message
+
+        inner = RuntimeError("429 RESOURCE_EXHAUSTED: cuota superada")
+        outer = RuntimeError(f"envuelto: {inner}")
+        outer.__cause__ = inner
+        self.assertIn("RESOURCE_EXHAUSTED", _root_message(outer))
+        self.assertEqual("simple", _root_message(ValueError("simple")))
+
+    def test_cliente_se_reutiliza(self) -> None:
+        from src.llm.gemini_strategy import GeminiStrategy
+
+        from config.settings import Settings
+
+        settings = Settings(_env_file=None)
+        settings.gemini_api_key = "dummy-solo-construccion"
+        strategy = GeminiStrategy(settings)
+        self.assertIs(strategy._get_client(), strategy._get_client())
+
 
 class TestVerdictParsing(unittest.TestCase):
     def test_aprobado(self) -> None:

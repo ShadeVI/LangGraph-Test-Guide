@@ -26,6 +26,49 @@ from src.llm.base import LLMConfigurationError, LLMProviderError, LLMStrategy
 
 logger = get_logger(__name__)
 
+#: Patrones que identifican el error REAL de la API entre envoltorios.
+_API_ERROR_HINTS = (
+    "ClientError",
+    "APIError",
+    "UNAVAILABLE",
+    "NOT_FOUND",
+    "RESOURCE_EXHAUSTED",
+    "DEADLINE_EXCEEDED",
+    "PERMISSION_DENIED",
+    "quota",
+    "Quota",
+)
+
+
+def _root_message(exc: BaseException) -> str:
+    """Extrae el mensaje de error más informativo de una cadena anidada.
+
+    Tenacity reintenta y el error final suele ser genérico ("client has been
+    closed"); el motivo real (429 de cuota, 503 de capacidad, 404 de modelo)
+    vive en los niveles `__cause__`/`__context__`. Se busca ahí primero.
+
+    Args:
+        exc: Excepción capturada.
+
+    Returns:
+        Línea más relevante (máx. 300 caracteres).
+    """
+    seen_ids: set[int] = set()
+    fallback = ""
+    current: BaseException | None = exc
+    depth = 0
+    while current is not None and id(current) not in seen_ids and depth < 8:
+        seen_ids.add(id(current))
+        depth += 1
+        text = str(current).strip()
+        if text and not fallback:
+            fallback = text.splitlines()[-1].strip()[:300]
+        for line in text.splitlines():
+            if any(hint in line for hint in _API_ERROR_HINTS):
+                return line.strip()[:300]
+        current = current.__cause__ or current.__context__
+    return fallback or str(exc)[:300]
+
 
 def _client(settings: Settings) -> Any:
     """Crea el cliente genai (timeouts por defecto del SDK).
@@ -139,11 +182,23 @@ class GeminiStrategy(LLMStrategy):
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._client: Any = None
 
     @property
     def name(self) -> str:
         """Returns: Identificador ``"gemini"``."""
         return "gemini"
+
+    def _get_client(self) -> Any:
+        """Devuelve el cliente genai reutilizable de esta estrategia.
+
+        Un solo cliente por estrategia (y por ejecución): evita el patrón
+        crear-usar-tirar, bajo el cual el `__del__` del SDK cierra el pool
+        httpx en mitad de los reintentos de tenacity.
+        """
+        if self._client is None:
+            self._client = _client(self._settings)
+        return self._client
 
     def generate(self, prompt: str) -> str:
         """Invoca al modelo Gemini configurado.
@@ -154,7 +209,7 @@ class GeminiStrategy(LLMStrategy):
         if not self._settings.gemini_api_key:
             raise LLMConfigurationError("GEMINI_API_KEY no configurada (proveedor omitido).")
         try:
-            response = _client(self._settings).models.generate_content(
+            response = self._get_client().models.generate_content(
                 model=self._settings.gemini_model,
                 contents=prompt,
                 config=_gen_config(self._settings),
@@ -164,7 +219,7 @@ class GeminiStrategy(LLMStrategy):
             raise
         except Exception as exc:  # noqa: BLE001 — normalización a error de dominio
             logger.debug("Gemini falló: %s", exc)
-            raise LLMProviderError(f"Gemini no disponible: {exc}") from exc
+            raise LLMProviderError(f"Gemini no disponible: {_root_message(exc)}") from exc
 
     def invoke_with_tools(
         self, messages: list[BaseMessage], tools: list[Any]
@@ -177,7 +232,7 @@ class GeminiStrategy(LLMStrategy):
             config = _gen_config(self._settings, tools)
             if system:
                 config.system_instruction = system
-            response = _client(self._settings).models.generate_content(
+            response = self._get_client().models.generate_content(
                 model=self._settings.gemini_model,
                 contents=contents,
                 config=config,
@@ -187,4 +242,4 @@ class GeminiStrategy(LLMStrategy):
             raise
         except Exception as exc:  # noqa: BLE001 — normalización a error de dominio
             logger.debug("Gemini con tools falló: %s", exc)
-            raise LLMProviderError(f"Gemini no disponible: {exc}") from exc
+            raise LLMProviderError(f"Gemini no disponible: {_root_message(exc)}") from exc
