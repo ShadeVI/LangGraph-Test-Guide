@@ -47,8 +47,17 @@ python-langGraph/
 ```powershell
 pip install -r requirements.txt
 Copy-Item .env.example .env   # y rellena GROQ_API_KEY / GEMINI_API_KEY
-# Ollama (opcional, respaldo local): ollama serve; ollama pull llama3.1
+# Ollama (opcional, respaldo local): ollama serve; ollama pull qwen3.5:4b
 ```
+
+> **¿Instalación en otro PC?** Usa el lockfile con versiones exactas verificadas
+> (`requirements-frozen.txt` en vez de `requirements.txt`) y asegúrate de usar
+> el Python del venv (`.\venv\Scripts\Activate.ps1` y `python --version` → 3.12.x):
+> ```powershell
+> py -3.12 -m venv venv
+> .\venv\Scripts\Activate.ps1
+> pip install -r requirements-frozen.txt
+> ```
 
 ## Uso
 

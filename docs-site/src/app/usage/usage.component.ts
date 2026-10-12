@@ -266,7 +266,7 @@ export class UsageSectionComponent {
     ['GROQ_API_KEY', '—', 'Proveedor prioritario (nube)'],
     ['GEMINI_API_KEY', '—', 'Segundo en el fallback (nube; vale GOOGLE_API_KEY)'],
     ['GROQ_MODEL / GEMINI_MODEL', 'llama-3.3-70b… / gemini-flash-latest', 'Modelos por proveedor'],
-    ['OLLAMA_MODEL / OLLAMA_BASE_URL', 'llama3.1 / localhost:11434', 'Respaldo local sin key'],
+    ['OLLAMA_MODEL / OLLAMA_BASE_URL', 'qwen3.5:4b / localhost:11434', 'Respaldo local sin key'],
     ['OLLAMA_NUM_PREDICT', '1024', 'Tope de tokens por llamada (imprescindible en CPU)'],
     ['OLLAMA_THINK', 'false', 'Razonamiento interno qwen3.x (en CPU, dejar en false)'],
     ['LLM_TEMPERATURE / LLM_TIMEOUT', '0.2 / 60', 'Generación y timeout (s)'],
