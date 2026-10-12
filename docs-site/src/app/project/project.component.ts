@@ -33,8 +33,8 @@ import { RevealDirective } from '../shared/reveal.directive';
             }
           </ol>
           <div class="callout">
-            <strong>¿Y si el borrador es malo?</strong> El editor no lo aprueba: emite
-            <code>REVISAR + motivo</code> y el grafo <strong>vuelve al redactor</strong> con ese
+            <strong>¿Y si el borrador es malo?</strong> El revisor no lo aprueba: emite
+            <code>REVISAR + motivo</code> y el grafo <strong>vuelve al sintetizador</strong> con ese
             feedback (máximo 2 vueltas, configurado en <code>MAX_REVISIONS</code>). Eso —un flujo
             que puede ciclar según lo que decide una IA— es lo que una simple tubería lineal no
             puede hacer, y por eso existe LangGraph.
@@ -104,12 +104,12 @@ import { RevealDirective } from '../shared/reveal.directive';
             </p>
             <pre class="code"><span class="k">class</span> <span class="f">GraphState</span>(TypedDict, total=<span class="k">False</span>):
     query: str                  <span class="c"># tu pregunta</span>
-    research_points: list[str]  <span class="c"># ← Investigador</span>
-    draft: str                  <span class="c"># ← Redactor</span>
-    final_report: str           <span class="c"># ← Editor</span>
+    research_points: list[str]  <span class="c"># ← Analizador</span>
+    draft: str                  <span class="c"># ← Sintetizador</span>
+    final_report: str           <span class="c"># ← Reviewer</span>
     needs_revision: bool        <span class="c"># veredicto REVISAR</span>
     revision_count: int         <span class="c"># vueltas dadas</span>
-    editor_feedback: str        <span class="c"># motivo a corregir</span>
+    reviewer_feedback: str        <span class="c"># motivo a corregir</span>
     providers_used: list[str]   <span class="c"># quién respondió</span>
     errors: list[str]           <span class="c"># fallos recuperados</span>
     path: list[str]             <span class="c"># ruta recorrida</span>
@@ -217,7 +217,7 @@ es.<span class="f">addEventListener</span>(<span class="s">"node"</span>, e =&gt
 
         <div appReveal>
           <h3>Estructura completa del repositorio</h3>
-          <pre class="code">main.py ──► src/graph/builder.py ──► researcher ──► writer ──► editor ──► END
+          <pre class="code">main.py ──► src/graph/builder.py ──► analyzer ──► synthesizer ──► reviewer ──► END
               │            │ (arista condicional)         ▲────────── REVISAR (máx. 2)
               ├── config/ (settings.py ← .env, logging_config.py)
               ├── src/llm/ (groq → gemini → ollama + ResilientLLMClient)
@@ -263,15 +263,15 @@ export class ProjectSectionComponent {
       text: 'Puede ser cualquier tema ("¿Qué es LangGraph?"). El sistema la valida y abre una "carpeta" vacía (el estado) con tu pregunta dentro.',
     },
     {
-      title: 'El Investigador la analiza',
+      title: 'El Analizador la analiza',
       text: 'Lee tu pregunta y extrae de 5 a 8 puntos clave: definiciones, causas, consecuencias. Es lo único que hace, pero lo hace bien.',
     },
     {
-      title: 'El Redactor escribe el borrador',
+      title: 'El Sintetizador escribe el borrador',
       text: 'Toma los puntos y redacta un texto técnico con introducción, desarrollo y cierre. Todavía sin formato bonito: texto plano.',
     },
     {
-      title: 'El Editor evalúa y maqueta',
+      title: 'El Revisor evalúa y maqueta',
       text: 'Primero juzga: ¿cubre los puntos? Si sí → APROBADO y lo convierte a Markdown. Si no → REVISAR con el motivo, y el grafo vuelve al paso 3 con ese feedback.',
     },
     {
@@ -306,27 +306,27 @@ export class ProjectSectionComponent {
   readonly agents = [
     {
       icon: '🔍',
-      title: 'Agente 1 · Investigador',
-      node: 'nodo: researcher',
+      title: 'Agente 1 · Analizador',
+      node: 'nodo: analyzer',
       reads: 'query',
       writes: 'research_points: list[str]',
       text: 'Analiza la consulta y extrae de 5 a 8 puntos clave en formato lista. Si el LLM no devuelve lista, usa la respuesta como bloque único.',
     },
     {
       icon: '✍️',
-      title: 'Agente 2 · Redactor',
-      node: 'nodo: writer',
+      title: 'Agente 2 · Sintetizador',
+      node: 'nodo: synthesizer',
       reads: 'query + research_points',
       writes: 'draft (texto plano)',
       text: 'Sintetiza los puntos en un borrador técnico: introducción, desarrollo y cierre. Sin inventar datos fuera de la investigación.',
     },
     {
       icon: '📝',
-      title: 'Agente 3 · Editor',
-      node: 'nodo: editor',
+      title: 'Agente 3 · Revisor',
+      node: 'nodo: reviewer',
       reads: 'query + draft (+ puntos)',
       writes: 'veredicto + final_report (Markdown)',
-      text: 'Emite VEREDICTO: APROBADO o REVISAR con motivo. Su veredicto alimenta la arista condicional: REVISAR devuelve el flujo al redactor con feedback; APROBADO cierra en END.',
+      text: 'Emite VEREDICTO: APROBADO o REVISAR con motivo. Su veredicto alimenta la arista condicional: REVISAR devuelve el flujo al sintetizador con feedback; APROBADO cierra en END. Además impone un tope de longitud (MAX_DRAFT_CHARS) que el sintetizador nunca conoce.',
     },
   ];
 
@@ -347,7 +347,7 @@ export class ProjectSectionComponent {
       icon: '🕸️',
       name: 'LangGraph',
       what: 'Orquestador que modela flujos de IA como grafos con estado (nodos + aristas).',
-      use: 'El pipeline researcher → writer → editor con su ciclo de revisión condicional.',
+      use: 'El pipeline analyzer → synthesizer → reviewer con su ciclo de revisión condicional.',
     },
     {
       icon: '⚡',
@@ -411,13 +411,13 @@ export class ProjectSectionComponent {
     },
     {
       name: 'El grafo: el plano del edificio',
-      text: 'Define los nodos (uno por agente), las flechas fijas y la flecha condicional del editor. Compilarlo produce un ejecutable al que le pasas el estado inicial y te devuelve el estado final.',
+      text: 'Define los nodos (uno por agente), las flechas fijas y la flecha condicional del revisor. Compilarlo produce un ejecutable al que le pasas el estado inicial y te devuelve el estado final.',
       files: ['src/graph/builder.py', 'src/graph/nodes.py', 'src/state.py'],
     },
     {
       name: 'Los agentes: los especialistas',
       text: 'Cada uno es una clase pequeña con un prompt enfocado. Comparten una base que mide tiempos y acumula trazabilidad (quién respondió, qué falló, qué ruta se siguió).',
-      files: ['src/agents/base_agent.py', 'researcher.py', 'writer.py', 'editor.py'],
+      files: ['src/agents/base_agent.py', 'analyzer.py', 'synthesizer.py', 'reviewer.py'],
     },
     {
       name: 'Los proveedores LLM: los motores intercambiables',

@@ -117,7 +117,7 @@ python tests/test_api.py
 python tests/test_finance.py</pre>
             <div class="callout">
               <strong>Qué mirar en los logs:</strong> la cadena de fallback al arrancar, el veredicto
-              del editor, las decisiones de <code>Enrutado: editor -&gt; writer/END</code> y el resumen
+              del revisor, las decisiones de <code>Enrutado: reviewer -&gt; synthesizer/END</code> y el resumen
               final con la <code>Ruta recorrida</code>.
             </div>
           </div>
@@ -132,7 +132,7 @@ python tests/test_finance.py</pre>
           <div class="grid2">
             <div class="card">
               <p><span class="tag">demo</span> <strong>LLM guionizado, sin keys.</strong> Respuestas
-              deterministas que siempre muestran el ciclo editor → writer. Instantáneo: ideal para
+              deterministas que siempre muestran el ciclo reviewer → synthesizer. Instantáneo: ideal para
               ver el grafo trabajar y para la web sin backend.</p>
               <pre class="code"><span class="c"># .env (es el valor por defecto)</span>
 API_MODE=demo</pre>
@@ -167,7 +167,7 @@ curl.exe -s -X POST http://localhost:8000/api/run -H <span class="s">"Content-Ty
 <span class="c"># abre http://localhost:8000/docs en el navegador</span></pre>
             <div class="callout ok">
               <strong>Qué esperar:</strong> el distintivo dirá <code>mode: demo</code> y la ruta
-              siempre será <code>researcher → writer → editor → writer → editor</code> (el guion
+              siempre será <code>analyzer → synthesizer → reviewer → synthesizer → reviewer</code> (el guion
               fuerza una revisión para que veas el ciclo). Tarda segundos.
             </div>
           </div>
@@ -271,7 +271,8 @@ export class UsageSectionComponent {
     ['OLLAMA_THINK', 'false', 'Razonamiento interno qwen3.x (en CPU, dejar en false)'],
     ['LLM_TEMPERATURE / LLM_TIMEOUT', '0.2 / 60', 'Generación y timeout (s)'],
     ['LOG_LEVEL', 'INFO', 'INFO, DEBUG, WARNING, ERROR'],
-    ['MAX_REVISIONS', '2', 'Vueltas máximas del ciclo editor→writer (0 = lineal)'],
+    ['MAX_REVISIONS', '2', 'Vueltas máximas del ciclo reviewer→synthesizer (0 = lineal)'],
+    ['MAX_DRAFT_CHARS', '1500', 'Tope del borrador (lo impone el revisor; el sintetizador no lo conoce)'],
     ['FINANCE_BUDGETS', 'data/budgets.json', 'Ruta de la BD ficticia del servidor MCP'],
     ['FINANCE_FX_URL', 'Frankfurter (dev)', 'Endpoint de la tasa EUR→USD (override para tests)'],
     ['API_MODE', 'demo', 'demo = LLM guionizado (web sin keys) · live = proveedores reales'],

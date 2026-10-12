@@ -56,7 +56,7 @@ def to_response(query: str, mode: str, final: GraphState) -> RunResponse:
         errors=list(final.get("errors", [])),
         revision_count=final.get("revision_count", 0),
         current_step=final.get("current_step", "done"),
-        editor_feedback=final.get("editor_feedback", ""),
+        reviewer_feedback=final.get("reviewer_feedback", ""),
         research_points=list(final.get("research_points", [])),
         draft=final.get("draft", ""),
     )
@@ -89,16 +89,16 @@ def _summarize_node(node: str, patch: dict[str, Any]) -> str:
     """
     providers = patch.get("providers_used", [])
     last = providers[-1] if providers else "?"
-    if node == "researcher":
+    if node == "analyzer":
         n = len(patch.get("research_points", []))
         return f"{n} puntos clave extraídos de la consulta (vía {last})"
-    if node == "writer":
+    if node == "synthesizer":
         revs = patch.get("revision_count", 0)
         size = len(patch.get("draft", ""))
         return f"Borrador Nº {revs + 1} redactado, {size} caracteres (vía {last})"
-    if node == "editor":
+    if node == "reviewer":
         if patch.get("needs_revision"):
-            return f"Veredicto: REVISAR — {patch.get('editor_feedback', '')} (vía {last})"
+            return f"Veredicto: REVISAR — {patch.get('reviewer_feedback', '')} (vía {last})"
         size = len(patch.get("final_report", ""))
         return f"Veredicto: APROBADO, informe de {size} caracteres (vía {last})"
     return f"Paso {patch.get('current_step', node)} (vía {last})"
@@ -107,40 +107,40 @@ def _summarize_node(node: str, patch: dict[str, Any]) -> str:
 def _route_after(node: str, patch: dict[str, Any], max_revisions: int) -> dict[str, str] | None:
     """Describe la transición que sigue a un nodo (historial lineal de la demo).
 
-    Refleja la topología de ``builder``: researcher→writer y writer→editor son
-    fijas; tras el editor decide el veredicto con el mismo criterio que el
+    Refleja la topología de ``builder``: analyzer→synthesizer y synthesizer→reviewer son
+    fijas; tras el reviewer decide el veredicto con el mismo criterio que el
     router (duplicación intencional y documentada: el stream no ejecuta el
     router, solo narra lo que este decidirá).
 
     Args:
         node: Nodo recién ejecutado.
         patch: Su patch (veredicto, contador, feedback).
-        max_revisions: Tope del ciclo editor→writer.
+        max_revisions: Tope del ciclo reviewer→synthesizer.
 
     Returns:
         Dict ``{from, to, detail}`` o None si el nodo no transiciona.
     """
-    if node == "researcher":
+    if node == "analyzer":
         n = len(patch.get("research_points", []))
-        return {"from": "researcher", "to": "writer", "detail": f"{n} puntos listos"}
-    if node == "writer":
+        return {"from": "analyzer", "to": "synthesizer", "detail": f"{n} puntos listos"}
+    if node == "synthesizer":
         revs = patch.get("revision_count", 0)
-        return {"from": "writer", "to": "editor", "detail": f"borrador Nº {revs + 1} terminado"}
-    if node == "editor":
+        return {"from": "synthesizer", "to": "reviewer", "detail": f"borrador Nº {revs + 1} terminado"}
+    if node == "reviewer":
         if patch.get("needs_revision"):
             used = patch.get("revision_count", 0)
             if used < max_revisions:
                 return {
-                    "from": "editor",
-                    "to": "writer",
-                    "detail": f"REVISAR ({used + 1}/{max_revisions}): {patch.get('editor_feedback', '')}",
+                    "from": "reviewer",
+                    "to": "synthesizer",
+                    "detail": f"REVISAR ({used + 1}/{max_revisions}): {patch.get('reviewer_feedback', '')}",
                 }
             return {
-                "from": "editor",
+                "from": "reviewer",
                 "to": "end",
                 "detail": f"límite de revisiones (máx. {max_revisions}): se publica el último borrador",
             }
-        return {"from": "editor", "to": "end", "detail": "APROBADO: informe final"}
+        return {"from": "reviewer", "to": "end", "detail": "APROBADO: informe final"}
     return None
 
 
@@ -185,7 +185,7 @@ def stream_pipeline(query: str, max_revisions: int, settings: Settings) -> Itera
                         "final_report": merged.get("final_report", ""),
                         "revision_count": merged.get("revision_count", 0),
                         "needs_revision": merged.get("needs_revision", False),
-                        "editor_feedback": merged.get("editor_feedback", ""),
+                        "reviewer_feedback": merged.get("reviewer_feedback", ""),
                         "path": merged.get("path", []),
                         "providers_used": merged.get("providers_used", []),
                         "errors": merged.get("errors", []),

@@ -59,7 +59,7 @@ export class WhySectionComponent {
     {
       icon: '🧩',
       title: 'Separación de incumbencias',
-      text: 'Un agente, una responsabilidad. El investigador no sabe redactar y el editor no investiga: cada prompt es corto, enfocado y fácil de mejorar.',
+      text: 'Un agente, una responsabilidad. El analizador no sabe sintetizar y el revisor no investiga: cada prompt es corto, enfocado y fácil de mejorar.',
       code: 'src/agents/ (SRP)',
     },
     {
@@ -71,7 +71,7 @@ export class WhySectionComponent {
     {
       icon: '🚀',
       title: 'Evolución futura barata',
-      text: 'Mañana se puede añadir una arista condicional (reintentar el draft si el editor lo rechaza) o streaming por nodo sin reescribir nada existente.',
+      text: 'Mañana se puede añadir una arista condicional (reintentar el draft si el revisor lo rechaza) o streaming por nodo sin reescribir nada existente.',
       code: 'src/graph/builder.py',
     },
   ];

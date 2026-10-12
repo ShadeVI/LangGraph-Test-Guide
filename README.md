@@ -21,12 +21,12 @@ python-langGraph/
 │   │   └── factory.py         # Orden Groq→Gemini→Ollama
 │   ├── agents/                # SRP: 1 agente = 1 responsabilidad
 │   │   ├── base_agent.py      # Template Method + trazabilidad (duración, path)
-│   │   ├── researcher.py      # Consulta → `research_points: list[str]`
-│   │   ├── writer.py          # Puntos (+feedback) → `draft`, cuenta revisiones
-│   │   └── editor.py          # Borrador → veredicto + `final_report` (Markdown)
+│   │   ├── analyzer.py      # Consulta → `research_points: list[str]`
+│   │   ├── synthesizer.py          # Puntos (+feedback) → `draft`, cuenta revisiones
+│   │   └── reviewer.py        # Borrador → veredicto + `final_report` (Markdown)
 │   └── graph/
 │       ├── nodes.py           # Adaptadores puros para StateGraph
-│       └── builder.py         # researcher → writer → editor -[REVISAR]→ writer / -[APROBADO]→ END
+│       └── builder.py         # analyzer → synthesizer → reviewer -[REVISAR]→ synthesizer / -[APROBADO]→ END
 └── tests/test_pipeline.py     # Tests con dobles (sin red ni keys)
 └── demo_paths.py              # 3 inputs que recorren rutas distintas del grafo
 ```
@@ -126,12 +126,16 @@ Dos dimensiones independientes, una demostración de LangGraph real:
 
 1. **Fallback intra-nodo**: cada nodo llama a `ResilientLLMClient.generate()`:
    Groq → Gemini → Ollama, con `WARNING` y continuación sin interrumpir el grafo.
-2. **Ciclo inter-nodos**: el Editor emite `VEREDICTO: APROBADO | REVISAR - motivo`.
-   Con REVISAR, la arista condicional devuelve el flujo a `writer` con el feedback;
+2. **Ciclo inter-nodos**: el Revisor emite `VEREDICTO: APROBADO | REVISAR - motivo`.
+   Con REVISAR, la arista condicional devuelve el flujo a `synthesizer` con el feedback;
    `MAX_REVISIONS=2` (ver `.env`) acota el ciclo y garantiza terminación.
+3. **Tope de longitud determinista**: si el borrador supera `MAX_DRAFT_CHARS=1500`, el
+   revisor fuerza REVISAR en código (los LLM no saben contar caracteres). El motivo
+   que recibe el sintetizador nunca incluye la cifra ("demasiado extenso"); los
+   números quedan solo en el log.
 
-Rutas posibles: `researcher→writer→editor→END` ·
-`…→editor→writer→editor→END` · `…→END forzado por tope (WARNING)`.
+Rutas posibles: `analyzer→synthesizer→reviewer→END` ·
+`…→reviewer→synthesizer→reviewer→END` · `…→END forzado por tope (WARNING)`.
 
 Detalle del fallback intra-nodo (orden de prioridad):
 
@@ -145,14 +149,14 @@ Cada llamada registra `providers_used` y `errors` en el `GraphState` para audito
 ## Observabilidad (logging)
 
 ```
-2026-… | INFO     | …builder | Grafo compilado: researcher -> writer -> editor -[REVISAR]-> writer (máx. 2) / -[APROBADO]-> END.
+2026-… | INFO     | …builder | Grafo compilado: analyzer -> synthesizer -> reviewer -[REVISAR]-> synthesizer (máx. 2) / -[APROBADO]-> END.
 2026-… | INFO     | …resilient_client | Probando proveedor LLM: groq
 2026-… | WARNING  | …resilient_client | Fallo proveedor 'groq': 429… Aplicando fallback…
 2026-… | INFO     | …resilient_client | Proveedor 'gemini' respondió correctamente.
-2026-… | INFO     | …editor | Veredicto: REVISAR (motivo: falta el ciclo de Calvin).
-2026-… | INFO     | …builder | Enrutado: editor -> writer (revisión 1/2; motivo: …).
-2026-… | INFO     | …editor | ✔ Nodo 'editor' finalizado en 1.84s.
-2026-… | INFO     | main | Ruta recorrida: researcher -> writer -> editor -> writer -> editor
+2026-… | INFO     | …reviewer | Veredicto: REVISAR (motivo: falta el ciclo de Calvin).
+2026-… | INFO     | …builder | Enrutado: reviewer -> synthesizer (revisión 1/2; motivo: …).
+2026-… | INFO     | …reviewer | ✔ Nodo 'reviewer' finalizado en 1.84s.
+2026-… | INFO     | main | Ruta recorrida: analyzer -> synthesizer -> reviewer -> synthesizer -> reviewer
 ```
 
 Niveles: `INFO` (ciclo de vida, aciertos), `WARNING` (fallo + fallback), `ERROR` (fallo total).

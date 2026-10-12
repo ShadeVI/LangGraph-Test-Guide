@@ -10,7 +10,7 @@ class RunRequest(BaseModel):
 
     Attributes:
         query: Consulta a procesar (3–500 caracteres).
-        max_revisions: Vueltas máximas del ciclo editor→writer (0–5).
+        max_revisions: Vueltas máximas del ciclo reviewer→synthesizer (0–5).
     """
 
     query: str = Field(min_length=3, max_length=500)
@@ -29,7 +29,7 @@ class RunResponse(BaseModel):
         errors: Fallos recuperados vía fallback.
         revision_count: Revisiones realizadas.
         current_step: Paso final ("done").
-        editor_feedback: Último motivo de REVISAR (vacío si se aprobó).
+        reviewer_feedback: Último motivo de REVISAR (vacío si se aprobó).
         research_points: Puntos extraídos (para inspeccionar el estado final).
         draft: Último borrador (para inspeccionar el estado final).
     """
@@ -43,7 +43,7 @@ class RunResponse(BaseModel):
     errors: list[str] = Field(default_factory=list)
     revision_count: int = 0
     current_step: str = "done"
-    editor_feedback: str = ""
+    reviewer_feedback: str = ""
     research_points: list[str] = Field(default_factory=list)
     draft: str = ""
 
@@ -62,4 +62,4 @@ class ConfigResponse(BaseModel):
     max_revisions_default: int
     providers_order: list[str]
     cors_origins: list[str] = Field(default_factory=list)
-    graph: str = "researcher -> writer -> editor -[REVISAR]-> writer / -[APROBADO]-> END"
+    graph: str = "analyzer -> synthesizer -> reviewer -[REVISAR]-> synthesizer / -[APROBADO]-> END"

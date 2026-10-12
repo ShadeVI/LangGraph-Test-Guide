@@ -38,7 +38,7 @@ export class InicioPage {
   readonly cards = [
     { icon: '🧠', path: '/langchain', title: 'LangChain', text: 'Framework para apps con LLMs: modelos, prompts, cadenas y herramientas.' },
     { icon: '🕸️', path: '/langgraph', title: 'LangGraph', text: 'Orquestación como grafos de estado: nodos, aristas, ciclos y memoria.' },
-    { icon: '🏗️', path: '/proyecto', title: 'El proyecto', text: 'Pipeline Investigador → Redactor → Editor con fallback resiliente.' },
+    { icon: '🏗️', path: '/proyecto', title: 'El proyecto', text: 'Pipeline Analizador → Sintetizador → Reviewer con fallback resiliente.' },
     { icon: '⚖️', path: '/por-que', title: '¿Por qué LangGraph?', text: 'Decisiones de arquitectura trazables al código.' },
     { icon: '📖', path: '/uso', title: 'Guía de uso', text: 'Instalación, .env, CLI y uso como librería.' },
     { icon: '🔌', path: '/mcp', title: '¿Por qué MCP?', text: 'El protocolo tras las tools: qué resuelve y por qué lo elegimos.' },

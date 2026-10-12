@@ -10,15 +10,15 @@ class GraphState(TypedDict, total=False):
 
     Attributes:
         query: Consulta original del usuario (única entrada requerida).
-        research_points: Puntos clave estructurados del Investigador.
-        draft: Borrador técnico del Redactor.
-        final_report: Informe Markdown final del Editor.
+        research_points: Puntos clave estructurados del Analizador.
+        draft: Borrador técnico del Sintetizador.
+        final_report: Informe Markdown final del Reviewer.
         providers_used: Trazabilidad de qué proveedor resolvió cada llamada.
         errors: Fallos de proveedor capturados (no fatales, para observabilidad).
-        current_step: Etapa actual del pipeline (researcher/writer/editor/done).
-        needs_revision: Veredicto del Editor; True reencamina a writer (ciclo).
+        current_step: Etapa actual del pipeline (analyzer/synthesizer/reviewer/done).
+        needs_revision: Veredicto del Reviewer; True reencamina a synthesizer (ciclo).
         revision_count: Nº de revisiones ya realizadas (acota el ciclo).
-        editor_feedback: Motivo del veredicto REVISAR (guía la reescritura).
+        reviewer_feedback: Motivo del veredicto REVISAR (guía la reescritura).
         path: Nodos recorridos en orden (evidencia la ruta no lineal).
     """
 
@@ -31,7 +31,7 @@ class GraphState(TypedDict, total=False):
     current_step: str
     needs_revision: bool
     revision_count: int
-    editor_feedback: str
+    reviewer_feedback: str
     path: list[str]
 
 
@@ -59,6 +59,6 @@ def initial_state(query: str) -> GraphState:
         current_step="started",
         needs_revision=False,
         revision_count=0,
-        editor_feedback="",
+        reviewer_feedback="",
         path=[],
     )

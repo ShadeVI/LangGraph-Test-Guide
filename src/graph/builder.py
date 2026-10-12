@@ -1,7 +1,7 @@
 """Ensamblaje del StateGraph con ciclo de revisión acotado.
 
-Flujo: researcher → writer → editor, con arista CONDICIONAL tras el editor:
-  - veredicto REVISAR (y revisiones restantes) → vuelta a writer (ciclo);
+Flujo: analyzer → synthesizer → reviewer, con arista CONDICIONAL tras el reviewer:
+  - veredicto REVISAR (y revisiones restantes) → vuelta a synthesizer (ciclo);
   - veredicto APROBADO o tope de revisiones → END.
 
 Esto ejercita la capacidad distintiva de LangGraph frente a una cadena lineal:
@@ -23,80 +23,84 @@ from src.state import GraphState
 
 logger = get_logger(__name__)
 
-#: Destinos posibles de la arista condicional tras el editor.
-ROUTE_TO_WRITER = "writer"
+#: Destinos posibles de la arista condicional tras el reviewer.
+ROUTE_TO_SYNTHESIZER = "synthesizer"
 ROUTE_TO_END = "end"
 
 #: Nodo de entrada del grafo (lo usa el stream para anunciar quién empieza).
-ENTRY_POINT = "researcher"
+ENTRY_POINT = "analyzer"
 
 
 def make_router(max_revisions: int) -> Callable[[GraphState], str]:
-    """Crea la función de enrutado editor → writer|END.
+    """Crea la función de enrutado reviewer → synthesizer|END.
 
     Args:
-        max_revisions: Nº máximo de vueltas editor→writer. Garantiza
-            terminación aunque el editor pida revisar eternamente.
+        max_revisions: Nº máximo de vueltas reviewer→synthesizer. Garantiza
+            terminación aunque el revisor pida revisar eternamente.
 
     Returns:
-        Función `estado -> "writer" | "end"` con logging de la decisión.
+        Función `estado -> "synthesizer" | "end"` con logging de la decisión.
     """
     if max_revisions < 0:
         raise ValueError("max_revisions no puede ser negativo.")
 
-    def route_after_editor(state: GraphState) -> str:
+    def route_after_reviewer(state: GraphState) -> str:
         """Decide el siguiente nodo según veredicto y contador de revisiones."""
         used = state.get("revision_count", 0)
         if state.get("needs_revision") and used < max_revisions:
             logger.info(
-                "Enrutado: editor -> writer (revisión %d/%d; motivo: %s).",
+                "Enrutado: reviewer -> synthesizer (revisión %d/%d; motivo: %s).",
                 used + 1,
                 max_revisions,
-                state.get("editor_feedback", "sin motivo"),
+                state.get("reviewer_feedback", "sin motivo"),
             )
-            return ROUTE_TO_WRITER
+            return ROUTE_TO_SYNTHESIZER
         if state.get("needs_revision"):
             logger.warning(
-                "Enrutado: editor -> END (límite de revisiones alcanzado, máx. %d; "
+                "Enrutado: reviewer -> END (límite de revisiones alcanzado, máx. %d; "
                 "se publica el último borrador).",
                 max_revisions,
             )
         else:
-            logger.info("Enrutado: editor -> END (informe aprobado).")
+            logger.info("Enrutado: reviewer -> END (informe aprobado).")
         return ROUTE_TO_END
 
-    return route_after_editor
+    return route_after_reviewer
 
 
-def build_graph_with_llm(llm: ResilientLLMClient, max_revisions: int = 2) -> Any:
+def build_graph_with_llm(
+    llm: ResilientLLMClient, max_revisions: int = 2, max_draft_chars: int = 1500
+) -> Any:
     """Construye y compila el grafo inyectando el cliente LLM (DIP, testeable).
 
     Args:
         llm: Cliente resiliente compartido por los tres agentes.
-        max_revisions: Vueltas máximas del ciclo editor→writer.
+        max_revisions: Vueltas máximas del ciclo reviewer→synthesizer.
+        max_draft_chars: Tope que el revisor impone al borrador (el
+            sintetizador nunca conoce la cifra).
 
     Returns:
         Grafo compilado listo para ``.invoke(estado_inicial)``.
     """
-    nodes = make_nodes(llm, max_revisions)
+    nodes = make_nodes(llm, max_revisions, max_draft_chars)
 
     builder = StateGraph(GraphState)
-    builder.add_node("researcher", nodes["researcher"])
-    builder.add_node("writer", nodes["writer"])
-    builder.add_node("editor", nodes["editor"])
+    builder.add_node("analyzer", nodes["analyzer"])
+    builder.add_node("synthesizer", nodes["synthesizer"])
+    builder.add_node("reviewer", nodes["reviewer"])
 
     builder.set_entry_point(ENTRY_POINT)
-    builder.add_edge("researcher", "writer")
-    builder.add_edge("writer", "editor")
+    builder.add_edge("analyzer", "synthesizer")
+    builder.add_edge("synthesizer", "reviewer")
     builder.add_conditional_edges(
-        "editor",
+        "reviewer",
         make_router(max_revisions),
-        {ROUTE_TO_WRITER: "writer", ROUTE_TO_END: END},
+        {ROUTE_TO_SYNTHESIZER: "synthesizer", ROUTE_TO_END: END},
     )
 
     logger.info(
-        "Grafo compilado: researcher -> writer -> editor "
-        "-[REVISAR]-> writer (máx. %d) / -[APROBADO]-> END.",
+        "Grafo compilado: analyzer -> synthesizer -> reviewer "
+        "-[REVISAR]-> synthesizer (máx. %d) / -[APROBADO]-> END.",
         max_revisions,
     )
     return builder.compile()
@@ -115,4 +119,6 @@ def build_graph(settings: Settings) -> Any:
     Returns:
         Grafo compilado listo para ``.invoke(estado_inicial)``.
     """
-    return build_graph_with_llm(build_resilient_client(settings), settings.max_revisions)
+    return build_graph_with_llm(
+        build_resilient_client(settings), settings.max_revisions, settings.max_draft_chars
+    )

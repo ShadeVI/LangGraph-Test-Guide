@@ -14,7 +14,13 @@ from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
 from config.logging_config import get_logger
-from src.finance.nodes import FinanceAnalystAgent, extractor_node, loader_node, reporter_node
+from src.finance.nodes import (
+    FinanceAnalystAgent,
+    describe_tool_calls,
+    extractor_node,
+    loader_node,
+    reporter_node,
+)
 from src.finance.state import FinanceState
 from src.llm.resilient_client import ResilientLLMClient
 
@@ -85,7 +91,9 @@ def build_finance_graph(
         return analyst.run(state)
 
     async def tools_node(state: FinanceState) -> dict[str, Any]:
-        logger.info("Grafo finance: ejecutando %d tool_calls.", _pending_calls(state))
+        logger.info(
+            "Grafo finance: ejecutando tools: %s.", describe_tool_calls(_pending_tool_calls(state))
+        )
         # Async a propósito: las tools MCP solo viven en modo async.
         # El grafo finance se ejecuta con `ainvoke` (los nodos sync corren en hilos).
         out = await executor.ainvoke(state)
@@ -119,10 +127,10 @@ def build_finance_graph(
     return builder.compile()
 
 
-def _pending_calls(state: FinanceState) -> int:
-    """Nº de tool_calls pendientes en el último mensaje del analista."""
+def _pending_tool_calls(state: FinanceState) -> list[dict[str, Any]]:
+    """Tool_calls pendientes en el último mensaje del analista."""
     messages = state.get("messages", [])
     last = messages[-1] if messages else None
     if isinstance(last, AIMessage):
-        return len(last.tool_calls or [])
-    return 0
+        return list(last.tool_calls or [])
+    return []

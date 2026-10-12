@@ -1,7 +1,7 @@
 """LLM guionizado para el modo demo de la API (determinista, sin red ni keys).
 
 Flujo fijo para que la demo siempre muestre lo interesante: el ciclo
-editor→writer (REVISAR una vez) y luego APROBADO.
+reviewer→synthesizer (REVISAR una vez) y luego APROBADO.
 """
 
 from __future__ import annotations
@@ -18,11 +18,11 @@ class ScriptedDemoLLM(LLMStrategy):
             "- Cada nodo lee el estado y devuelve un patch parcial\n"
             "- Las aristas condicionales permiten ciclos y reintentos"
         )
-        self._writers = [
+        self._synthesizers = [
             "Borrador inicial incompleto.",
             "Borrador corregido con grafos, estado y aristas condicionales.",
         ]
-        self._editors = [
+        self._reviewers = [
             "VEREDICTO: REVISAR - falta explicar las aristas condicionales\n\n# Parcial",
             "VEREDICTO: APROBADO\n\n# Informe demo\n\n## Definición\nTexto final de demostración.",
         ]
@@ -35,13 +35,13 @@ class ScriptedDemoLLM(LLMStrategy):
 
     def generate(self, prompt: str) -> str:
         """Sirve la siguiente réplica del guion según el agente que llama."""
-        if "analista de investigación" in prompt:
+        if "analizador senior" in prompt:
             return self._research
-        if "redactor técnico" in prompt:
-            out = self._writers[min(self._w, len(self._writers) - 1)]
+        if "sintetizador senior" in prompt:
+            out = self._synthesizers[min(self._w, len(self._synthesizers) - 1)]
             self._w += 1
             return out
-        out = self._editors[min(self._e, len(self._editors) - 1)]
+        out = self._reviewers[min(self._e, len(self._reviewers) - 1)]
         self._e += 1
         return out
 

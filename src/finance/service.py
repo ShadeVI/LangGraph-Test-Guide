@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, ToolMessage
 
 from config.logging_config import get_logger
 from config.settings import Settings
@@ -18,6 +18,7 @@ from src.finance.builder import (
     build_finance_graph,
     make_finance_router,
 )
+from src.finance.nodes import describe_tool_calls
 from src.finance.demo_llm import ScriptedFinanceLLM
 from src.finance.mcp_tools import mcp_session_tools
 from src.finance.state import FinanceInputError, FinanceState, initial_finance_state
@@ -142,12 +143,11 @@ def _summarize_finance_node(node: str, patch: dict[str, Any], merged: dict[str, 
     if node == "analyst":
         messages = merged.get("messages", [])
         last_msg = messages[-1] if messages else None
-        calls = len(last_msg.tool_calls or []) if isinstance(last_msg, AIMessage) else 0
-        if calls:
-            return f"analista pide {calls} tool_calls{via}"
-        return f"analista cierra sin tools{via}"
+        calls = last_msg.tool_calls if isinstance(last_msg, AIMessage) else None
+        return f"analista pide: {describe_tool_calls(calls)}{via}"
     if node == "tools":
-        return f"{len(patch.get('messages', []))} tools MCP ejecutadas (vuelta {merged.get('tool_iterations', 0)})"
+        ran = sorted({m.name or "?" for m in patch.get("messages", []) if isinstance(m, ToolMessage)})
+        return f"tools MCP: {', '.join(ran) or 'ninguna'} (vuelta {merged.get('tool_iterations', 0)})"
     if node == "reporter":
         return (
             f"informe de {len(merged.get('final_report', ''))} caracteres, "

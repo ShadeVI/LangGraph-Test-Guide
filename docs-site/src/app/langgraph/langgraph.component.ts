@@ -38,17 +38,17 @@ import { RevealDirective } from '../shared/reveal.directive';
 
 grafo = <span class="f">StateGraph</span>(Estado)   <span class="c"># 1. el estado viaja</span>
 
-grafo.<span class="f">add_node</span>(<span class="s">"researcher"</span>, investigar)  <span class="c"># 2. nodos</span>
-grafo.<span class="f">add_node</span>(<span class="s">"writer"</span>, redactar)
-grafo.<span class="f">add_node</span>(<span class="s">"editor"</span>, editar)
+grafo.<span class="f">add_node</span>(<span class="s">"analyzer"</span>, analizar)  <span class="c"># 2. nodos</span>
+grafo.<span class="f">add_node</span>(<span class="s">"synthesizer"</span>, sintetizar)
+grafo.<span class="f">add_node</span>(<span class="s">"reviewer"</span>, revisar)
 
-grafo.<span class="f">set_entry_point</span>(<span class="s">"researcher"</span>)  <span class="c"># 3. entrada</span>
-grafo.<span class="f">add_edge</span>(<span class="s">"researcher"</span>, <span class="s">"writer"</span>)  <span class="c"># 4a. fija</span>
-grafo.<span class="f">add_edge</span>(<span class="s">"writer"</span>, <span class="s">"editor"</span>)
+grafo.<span class="f">set_entry_point</span>(<span class="s">"analyzer"</span>)  <span class="c"># 3. entrada</span>
+grafo.<span class="f">add_edge</span>(<span class="s">"analyzer"</span>, <span class="s">"synthesizer"</span>)  <span class="c"># 4a. fija</span>
+grafo.<span class="f">add_edge</span>(<span class="s">"synthesizer"</span>, <span class="s">"reviewer"</span>)
 
 grafo.<span class="f">add_conditional_edges</span>(  <span class="c"># 4b. decide según estado</span>
-    <span class="s">"editor"</span>, donde_voy,
-    {{ '{' }}<span class="s">"writer"</span>: <span class="s">"writer"</span>, <span class="s">"end"</span>: END{{ '}' }})
+    <span class="s">"reviewer"</span>, donde_voy,
+    {{ '{' }}<span class="s">"synthesizer"</span>: <span class="s">"synthesizer"</span>, <span class="s">"end"</span>: END{{ '}' }})
 
 app = grafo.<span class="f">compile</span>()  <span class="c"># 5. ejecutable</span></pre>
           </div>
@@ -61,11 +61,11 @@ final[<span class="s">"path"</span>]          <span class="c"># ruta recorrida</
 
 <span class="c"># Paso a paso → un evento por nodo (lo usa el SSE)</span>
 <span class="k">for</span> paso <span class="k">in</span> app.<span class="f">stream</span>(estado):
-    <span class="f">emitir</span>(paso)  <span class="c"># researcher… writer… editor…</span></pre>
+    <span class="f">emitir</span>(paso)  <span class="c"># analyzer… synthesizer… reviewer…</span></pre>
             <div class="callout ok">
               <strong>El router decide con datos, no con magia:</strong>
               <code>donde_voy</code> lee <code>needs_revision</code> y
-              <code>revision_count</code> del estado: REVISAR + vueltas restantes → writer;
+              <code>revision_count</code> del estado: REVISAR + vueltas restantes → synthesizer;
               si no → END. Pruébalo en vivo en la página <code>/demo</code>.
             </div>
           </div>
@@ -87,7 +87,7 @@ final[<span class="s">"path"</span>]          <span class="c"># ruta recorrida</
             <p>
               Una <em>chain</em> es un DAG lineal: A → B → C. Pero los sistemas multi-agente
               reales necesitan <strong>ciclos</strong> (reintentar el borrador hasta que el
-              editor lo apruebe), <strong>ramas condicionales</strong> (si falla un proveedor,
+              reviewer lo apruebe), <strong>ramas condicionales</strong> (si falla un proveedor,
               ir a otro) y <strong>estado persistente</strong> entre pasos. LangGraph modela
               todo eso de forma nativa.
             </p>
@@ -116,8 +116,8 @@ final[<span class="s">"path"</span>]          <span class="c"># ruta recorrida</
           <strong>Idea clave:</strong> el <strong>estado</strong> (un diccionario tipado) viaja
           por el grafo; cada <strong>nodo</strong> lee lo que necesita y devuelve un
           <em>patch</em> parcial; cada <strong>arista</strong> decide el siguiente paso. Esa es
-          exactamente la anatomía de nuestro proyecto: <code>GraphState → researcher →
-          writer → editor → END</code>.
+          exactamente la anatomía de nuestro proyecto: <code>GraphState → analyzer →
+          synthesizer → reviewer → END</code>.
         </div>
       </div>
     </section>
@@ -150,7 +150,7 @@ export class LanggraphSectionComponent {
     },
     {
       title: 'Conecta con aristas',
-      text: 'Flechas fijas para lo determinista (researcher → writer) y condicionales para lo que depende del contenido (el veredicto del editor).',
+      text: 'Flechas fijas para lo determinista (analyzer → synthesizer) y condicionales para lo que depende del contenido (el veredicto del revisor).',
     },
     {
       title: 'Compila el grafo',

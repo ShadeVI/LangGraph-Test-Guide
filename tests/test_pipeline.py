@@ -15,10 +15,10 @@ sys.path.insert(0, str(ROOT))
 from langchain_core.messages import AIMessage  # noqa: E402
 
 from config.logging_config import configure_logging  # noqa: E402
-from src.agents.editor import EditorAgent  # noqa: E402
+from src.agents.reviewer import ReviewerAgent  # noqa: E402
 from src.graph.builder import (  # noqa: E402
     ROUTE_TO_END,
-    ROUTE_TO_WRITER,
+    ROUTE_TO_SYNTHESIZER,
     build_graph_with_llm,
     make_router,
 )
@@ -30,7 +30,7 @@ from src.llm.resilient_client import (  # noqa: E402
     LLMAllProvidersFailedError,
     ResilientLLMClient,
 )
-from src.state import initial_state  # noqa: E402
+from src.state import GraphState, initial_state  # noqa: E402
 
 configure_logging("ERROR")
 
@@ -73,12 +73,12 @@ class ScriptedLLM(LLMStrategy):
     def __init__(
         self,
         research: str = "- Alpha\n- Beta",
-        writers: list[str] | None = None,
-        editors: list[str] | None = None,
+        synthesizers: list[str] | None = None,
+        reviewers: list[str] | None = None,
     ) -> None:
         self._research = research
-        self._writers = writers or ["Borrador sobre Alpha y Beta."]
-        self._editors = editors or ["VEREDICTO: APROBADO\n\n# Informe\n\nTexto final."]
+        self._synthesizers = synthesizers or ["Borrador sobre Alpha y Beta."]
+        self._reviewers = reviewers or ["VEREDICTO: APROBADO\n\n# Informe\n\nTexto final."]
         self._w = 0
         self._e = 0
 
@@ -87,13 +87,13 @@ class ScriptedLLM(LLMStrategy):
         return "scripted"
 
     def generate(self, prompt: str) -> str:
-        if "analista de investigación" in prompt:
+        if "analizador senior" in prompt:
             return self._research
-        if "redactor técnico" in prompt:
-            out = self._writers[min(self._w, len(self._writers) - 1)]
+        if "sintetizador senior" in prompt:
+            out = self._synthesizers[min(self._w, len(self._synthesizers) - 1)]
             self._w += 1
             return out
-        out = self._editors[min(self._e, len(self._editors) - 1)]
+        out = self._reviewers[min(self._e, len(self._reviewers) - 1)]
         self._e += 1
         return out
 
@@ -220,13 +220,13 @@ class TestGeminiConverters(unittest.TestCase):
 
 class TestVerdictParsing(unittest.TestCase):
     def test_aprobado(self) -> None:
-        needs, feedback, body = EditorAgent._parse_verdict("VEREDICTO: APROBADO\n\n# Doc")
+        needs, feedback, body = ReviewerAgent._parse_verdict("VEREDICTO: APROBADO\n\n# Doc")
         self.assertFalse(needs)
         self.assertEqual(feedback, "")
         self.assertEqual(body, "# Doc")
 
     def test_revisar_con_motivo(self) -> None:
-        needs, feedback, body = EditorAgent._parse_verdict(
+        needs, feedback, body = ReviewerAgent._parse_verdict(
             "VEREDICTO: REVISAR - faltan causas\n\n# Doc parcial"
         )
         self.assertTrue(needs)
@@ -234,7 +234,7 @@ class TestVerdictParsing(unittest.TestCase):
         self.assertEqual(body, "# Doc parcial")
 
     def test_sin_veredicto_aprueba_por_defecto(self) -> None:
-        needs, _, body = EditorAgent._parse_verdict("# Doc sin veredicto")
+        needs, _, body = ReviewerAgent._parse_verdict("# Doc sin veredicto")
         self.assertFalse(needs)
         self.assertIn("# Doc", body)
 
@@ -244,9 +244,9 @@ class TestRouter(unittest.TestCase):
         route = make_router(2)({"needs_revision": False, "revision_count": 0})
         self.assertEqual(route, ROUTE_TO_END)
 
-    def test_revisar_bajo_tope_vuelve_a_writer(self) -> None:
+    def test_revisar_bajo_tope_vuelve_a_synthesizer(self) -> None:
         route = make_router(2)({"needs_revision": True, "revision_count": 1})
-        self.assertEqual(route, ROUTE_TO_WRITER)
+        self.assertEqual(route, ROUTE_TO_SYNTHESIZER)
 
     def test_revisar_en_tope_fuerza_end(self) -> None:
         route = make_router(2)({"needs_revision": True, "revision_count": 2})
@@ -259,7 +259,7 @@ class TestRouter(unittest.TestCase):
 
 class TestPipeline(unittest.TestCase):
     def test_end_to_end_nominal_sin_revisiones(self) -> None:
-        """Ruta lineal researcher→writer→editor→END con veredicto APROBADO."""
+        """Ruta lineal analyzer→synthesizer→reviewer→END con veredicto APROBADO."""
         graph = build_graph_with_llm(ResilientLLMClient([ScriptedLLM()]), max_revisions=2)
         final = graph.invoke(initial_state("Tema de prueba"))
         self.assertEqual(final["research_points"], ["Alpha", "Beta"])
@@ -267,13 +267,13 @@ class TestPipeline(unittest.TestCase):
         self.assertTrue(final["final_report"].startswith("# Informe"))
         self.assertEqual(final["current_step"], "done")
         self.assertEqual(final["revision_count"], 0)
-        self.assertEqual(final["path"], ["researcher", "writer", "editor"])
+        self.assertEqual(final["path"], ["analyzer", "synthesizer", "reviewer"])
 
-    def test_loop_revision_vuelve_a_writer_y_aprueba(self) -> None:
-        """Ruta no lineal: editor REVISAR → writer v2 → editor APROBADO → END."""
+    def test_loop_revision_vuelve_a_synthesizer_y_aprueba(self) -> None:
+        """Ruta no lineal: reviewer REVISAR → synthesizer v2 → reviewer APROBADO → END."""
         llm = ScriptedLLM(
-            writers=["Borrador flojo.", "Borrador corregido y completo."],
-            editors=[
+            synthesizers=["Borrador flojo.", "Borrador corregido y completo."],
+            reviewers=[
                 "VEREDICTO: REVISAR - demasiado superficial\n\n# Parcial",
                 "VEREDICTO: APROBADO\n\n# Informe v2\n\nTexto final.",
             ],
@@ -281,7 +281,7 @@ class TestPipeline(unittest.TestCase):
         graph = build_graph_with_llm(ResilientLLMClient([llm]), max_revisions=2)
         final = graph.invoke(initial_state("Tema con revisión"))
         self.assertEqual(
-            final["path"], ["researcher", "writer", "editor", "writer", "editor"]
+            final["path"], ["analyzer", "synthesizer", "reviewer", "synthesizer", "reviewer"]
         )
         self.assertEqual(final["revision_count"], 1)
         self.assertIn("corregido", final["draft"])
@@ -291,12 +291,12 @@ class TestPipeline(unittest.TestCase):
     def test_tope_revisiones_termina_aunque_pida_revisar(self) -> None:
         """Garantía de terminación: con REVISAR eterno y max=1, el grafo acaba."""
         llm = ScriptedLLM(
-            editors=["VEREDICTO: REVISAR - nunca conforme\n\n# Parcial"],
+            reviewers=["VEREDICTO: REVISAR - nunca conforme\n\n# Parcial"],
         )
         graph = build_graph_with_llm(ResilientLLMClient([llm]), max_revisions=1)
         final = graph.invoke(initial_state("Tema imposible"))
         self.assertEqual(
-            final["path"], ["researcher", "writer", "editor", "writer", "editor"]
+            final["path"], ["analyzer", "synthesizer", "reviewer", "synthesizer", "reviewer"]
         )
         self.assertEqual(final["current_step"], "done")
         self.assertTrue(final["final_report"].startswith("# Parcial"))
@@ -304,6 +304,53 @@ class TestPipeline(unittest.TestCase):
     def test_initial_state_rechaza_vacio(self) -> None:
         with self.assertRaises(ValueError):
             initial_state("   ")
+
+
+class TestLengthRule(unittest.TestCase):
+    """El revisor impone el tope de longitud en código (el LLM no sabe contar)."""
+
+    def _agent(self, replies: list[str], max_chars: int = 100) -> ReviewerAgent:
+        llm = ResilientLLMClient([ScriptedLLM(reviewers=replies)])
+        return ReviewerAgent(llm, max_draft_chars=max_chars)
+
+    @staticmethod
+    def _state(draft: str) -> GraphState:
+        return GraphState(query="Tema", draft=draft, research_points=["A"])
+
+    def test_borrador_largo_fuerza_revision_aunque_apruebe(self) -> None:
+        agent = self._agent(["VEREDICTO: APROBADO\n\n# Doc"])
+        patch = agent.run(self._state("y" * 150))
+        self.assertTrue(patch["needs_revision"])
+        self.assertIn("extenso", patch["reviewer_feedback"])
+        # El sintetizador nunca debe conocer la cifra del tope.
+        self.assertNotIn("100", patch["reviewer_feedback"])
+
+    def test_borrador_corto_aprobado_pasa(self) -> None:
+        agent = self._agent(["VEREDICTO: APROBADO\n\n# Doc"])
+        patch = agent.run(self._state("corto"))
+        self.assertFalse(patch["needs_revision"])
+        self.assertEqual(patch["reviewer_feedback"], "")
+
+    def test_borrador_largo_suma_motivo_al_revisar(self) -> None:
+        agent = self._agent(["VEREDICTO: REVISAR - flojo\n\n# Doc"])
+        patch = agent.run(self._state("y" * 150))
+        self.assertTrue(patch["needs_revision"])
+        self.assertIn("flojo", patch["reviewer_feedback"])
+        self.assertIn("extenso", patch["reviewer_feedback"])
+
+    def test_loop_por_longitud_en_grafo(self) -> None:
+        llm = ScriptedLLM(
+            synthesizers=["x" * 1600, "corto y bueno"],
+            reviewers=["VEREDICTO: APROBADO\n\n# Largo", "VEREDICTO: APROBADO\n\n# Corto"],
+        )
+        graph = build_graph_with_llm(ResilientLLMClient([llm]))
+        final = graph.invoke(initial_state("Tema largo"))
+        self.assertEqual(final["revision_count"], 1)
+        self.assertEqual(
+            final["path"], ["analyzer", "synthesizer", "reviewer", "synthesizer", "reviewer"]
+        )
+        self.assertTrue(final["final_report"].startswith("# Corto"))
+        self.assertEqual(final["current_step"], "done")
 
 
 if __name__ == "__main__":

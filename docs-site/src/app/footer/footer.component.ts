@@ -8,7 +8,7 @@ import { Component } from '@angular/core';
         <div>
           <strong>◈ Multi-Agente Docs</strong>
           <p>
-            Documentación del pipeline Investigador → Redactor → Editor
+            Documentación del pipeline Analizador → Sintetizador → Reviewer
             (LangChain + LangGraph · Groq → Gemini → Ollama).
           </p>
         </div>

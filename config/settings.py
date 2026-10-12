@@ -28,7 +28,9 @@ class Settings(BaseSettings):
         llm_temperature: Temperatura común a todos los proveedores.
         llm_timeout: Timeout en segundos por invocación LLM.
         log_level: Nivel de logging raíz (INFO, DEBUG, WARNING, ERROR).
-        max_revisions: Nº máximo de vueltas editor→writer antes de forzar END.
+        max_revisions: Nº máximo de vueltas reviewer→synthesizer antes de forzar END.
+        max_draft_chars: Longitud máxima del borrador; el revisor la impone en
+            código (el sintetizador nunca conoce la cifra).
         api_mode: "demo" (LLM guionizado, sin keys) o "live" (Groq→Gemini→Ollama).
         api_cors_origins: Orígenes permitidos por la API, separados por comas.
     """
@@ -51,6 +53,7 @@ class Settings(BaseSettings):
     llm_timeout: int = Field(default=60, alias="LLM_TIMEOUT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     max_revisions: int = Field(default=2, alias="MAX_REVISIONS")
+    max_draft_chars: int = Field(default=1500, alias="MAX_DRAFT_CHARS")
     api_mode: str = Field(default="demo", alias="API_MODE")
     api_cors_origins: str = Field(
         default="http://localhost:4200,http://127.0.0.1:4200", alias="API_CORS_ORIGINS"

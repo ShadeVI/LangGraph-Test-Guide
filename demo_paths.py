@@ -3,11 +3,11 @@
 Cada escenario usa un LLM guionizado (sin red ni API keys) que simula cómo
 responderían los proveedores a cada input, evidenciando:
 
-  A. Ruta lineal:   researcher → writer → editor → END (veredicto APROBADO).
-  B. Ciclo real:    researcher → writer → editor → writer → editor → END
+  A. Ruta lineal:   analyzer → synthesizer → reviewer → END (veredicto APROBADO).
+  B. Ciclo real:    analyzer → synthesizer → reviewer → synthesizer → reviewer → END
      (veredicto REVISAR una vez; el feedback guía la reescritura).
-  C. Fallback+tope: el 1er proveedor falla en writer (fallback a 2º) y el
-     editor pide revisar 2 veces con MAX=1 → END forzado con aviso.
+  C. Fallback+tope: el 1er proveedor falla en synthesizer (fallback a 2º) y el
+     reviewer pide revisar 2 veces con MAX=1 → END forzado con aviso.
 
 Ejecutar:  python demo_paths.py
 """
@@ -34,12 +34,12 @@ class ScriptedLLM(LLMStrategy):
     def __init__(
         self,
         research: str,
-        writers: list[str],
-        editors: list[str],
+        synthesizers: list[str],
+        reviewers: list[str],
     ) -> None:
         self._research = research
-        self._writers = writers
-        self._editors = editors
+        self._synthesizers = synthesizers
+        self._reviewers = reviewers
         self._w = 0
         self._e = 0
 
@@ -48,13 +48,13 @@ class ScriptedLLM(LLMStrategy):
         return "guion"
 
     def generate(self, prompt: str) -> str:
-        if "analista de investigación" in prompt:
+        if "analizador senior" in prompt:
             return self._research
-        if "redactor técnico" in prompt:
-            out = self._writers[min(self._w, len(self._writers) - 1)]
+        if "sintetizador senior" in prompt:
+            out = self._synthesizers[min(self._w, len(self._synthesizers) - 1)]
             self._w += 1
             return out
-        out = self._editors[min(self._e, len(self._editors) - 1)]
+        out = self._reviewers[min(self._e, len(self._reviewers) - 1)]
         self._e += 1
         return out
 
@@ -97,29 +97,29 @@ def run_scenario(title: str, query: str, strategies: list[LLMStrategy], max_revi
 def main() -> None:
     configure_logging("INFO")
 
-    # A · El editor aprueba a la primera: ruta lineal.
+    # A · El revisor aprueba a la primera: ruta lineal.
     run_scenario(
         "A · aprobación directa (ruta lineal)",
         "¿Qué es LangGraph y para qué sirve?",
         [
             ScriptedLLM(
                 research="- LangGraph modela flujos como grafos\n- El estado viaja entre nodos",
-                writers=["Borrador completo sobre LangGraph."],
-                editors=["VEREDICTO: APROBADO\n\n# ¿Qué es LangGraph?\n\nTexto final."],
+                synthesizers=["Borrador completo sobre LangGraph."],
+                reviewers=["VEREDICTO: APROBADO\n\n# ¿Qué es LangGraph?\n\nTexto final."],
             )
         ],
         max_revisions=2,
     )
 
-    # B · El editor pide una revisión: ciclo editor→writer→editor.
+    # B · El revisor pide una revisión: ciclo reviewer→synthesizer→reviewer.
     run_scenario(
-        "B · una revisión (ciclo editor→writer)",
+        "B · una revisión (ciclo reviewer→synthesizer)",
         "Explica la fotosíntesis de forma técnica",
         [
             ScriptedLLM(
                 research="- Fase luminosa\n- Ciclo de Calvin",
-                writers=["Borrador flojo.", "Borrador corregido con ambas fases."],
-                editors=[
+                synthesizers=["Borrador flojo.", "Borrador corregido con ambas fases."],
+                reviewers=[
                     "VEREDICTO: REVISAR - falta el ciclo de Calvin\n\n# Parcial",
                     "VEREDICTO: APROBADO\n\n# Fotosíntesis\n\nTexto final completo.",
                 ],
@@ -131,8 +131,8 @@ def main() -> None:
     # C · Fallo de proveedor + revisiones eternas con tope MAX=1.
     scripted_c = ScriptedLLM(
         research="- Strategy define familia de algoritmos\n- Factory crea objetos",
-        writers=["Borrador v1.", "Borrador v2."],
-        editors=["VEREDICTO: REVISAR - siempre se puede mejorar\n\n# Parcial v1"],
+        synthesizers=["Borrador v1.", "Borrador v2."],
+        reviewers=["VEREDICTO: REVISAR - siempre se puede mejorar\n\n# Parcial v1"],
     )
     run_scenario(
         "C · fallback 429 + tope de revisiones (END forzado)",

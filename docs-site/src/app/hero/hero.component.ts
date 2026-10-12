@@ -47,7 +47,7 @@ import { RevealDirective } from '../shared/reveal.directive';
         </div>
 
         <div class="pipe-caption" appReveal [delay]="200">
-          ↩ Arista condicional tras el editor: <code>REVISAR → writer</code> (máx. 2 revisiones) ·
+          ↩ Arista condicional tras el reviewer: <code>REVISAR → synthesizer</code> (máx. 2 revisiones) ·
           <code>APROBADO → END</code> — el grafo puede ciclar, no es una tubería lineal.
         </div>
 
@@ -159,9 +159,9 @@ export class HeroComponent {
   private readonly router = inject(Router);
   readonly nodes = [
     { icon: '❓', name: 'Query', sub: 'input usuario' },
-    { icon: '🔍', name: 'Researcher', sub: 'research_points' },
-    { icon: '✍️', name: 'Writer', sub: 'draft' },
-    { icon: '📝', name: 'Editor', sub: 'final_report' },
+    { icon: '🔍', name: 'Analyzer', sub: 'research_points' },
+    { icon: '✍️', name: 'Synthesizer', sub: 'draft' },
+    { icon: '📝', name: 'Reviewer', sub: 'final_report' },
   ];
 
   readonly stats = [

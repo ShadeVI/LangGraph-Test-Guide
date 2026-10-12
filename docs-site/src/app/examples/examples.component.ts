@@ -151,25 +151,25 @@ export class ExamplesSectionComponent {
         'GraphState({\n  query: "¿Qué es LangGraph y para qué sirve?",\n  research_points: [],\n  draft: "",\n  final_report: "",\n  providers_used: [],\n  errors: [],\n  current_step: "started"\n})',
     },
     {
-      stage: 'Researcher',
-      title: 'Etapa 1 · Investigador (nodo researcher)',
+      stage: 'Analyzer',
+      title: 'Etapa 1 · Analizador (nodo analyzer)',
       text: 'Llama al LLM con el prompt de análisis y parsea la respuesta en una lista de puntos clave. Registra qué proveedor respondió.',
       state:
-        'research_points: [\n  "LangGraph modela flujos como grafos…",\n  "El estado viaja entre nodos…",\n  "Soporta ciclos y persistencia…",\n  …\n]\nproviders_used: ["groq"]\ncurrent_step: "researcher"',
+        'research_points: [\n  "LangGraph modela flujos como grafos…",\n  "El estado viaja entre nodos…",\n  "Soporta ciclos y persistencia…",\n  …\n]\nproviders_used: ["groq"]\ncurrent_step: "analyzer"',
     },
     {
-      stage: 'Writer',
-      title: 'Etapa 2 · Redactor (nodo writer)',
+      stage: 'Synthesizer',
+      title: 'Etapa 2 · Sintetizador (nodo synthesizer)',
       text: 'Sintetiza los puntos en un borrador técnico en texto plano: introducción, desarrollo y cierre, sin formato todavía.',
       state:
-        'draft: "LangGraph es una librería para…\\n\\nEn primer lugar…"\nproviders_used: ["groq", "groq"]\ncurrent_step: "writer"',
+        'draft: "LangGraph es una librería para…\\n\\nEn primer lugar…"\nproviders_used: ["groq", "groq"]\ncurrent_step: "synthesizer"',
     },
     {
-      stage: 'Editor',
-      title: 'Etapa 3 · Editor (nodo editor → writer | END)',
-      text: 'Pule el estilo y emite un veredicto en la primera línea: APROBADO cierra el grafo (END); REVISAR devuelve el flujo al redactor con el motivo como feedback. La arista condicional + MAX_REVISIONS=2 acotan el ciclo: capacidad no lineal que una cadena simple no puede expresar.',
+      stage: 'Reviewer',
+      title: 'Etapa 3 · Reviewer (nodo reviewer → synthesizer | END)',
+      text: 'Pule el estilo y emite un veredicto en la primera línea: APROBADO cierra el grafo (END); REVISAR devuelve el flujo al sintetizador con el motivo como feedback. La arista condicional + MAX_REVISIONS=2 acotan el ciclo: capacidad no lineal que una cadena simple no puede expresar.',
       state:
-        'needs_revision: false  // o true → vuelta a writer\nfinal_report: "# ¿Qué es LangGraph…\\n\\n## Definición…"\nproviders_used: ["groq", "groq", "groq"]\npath: ["researcher", "writer", "editor"]  // o […, "writer", "editor"]\ncurrent_step: "done"',
+        'needs_revision: false  // o true → vuelta a synthesizer\nfinal_report: "# ¿Qué es LangGraph…\\n\\n## Definición…"\nproviders_used: ["groq", "groq", "groq"]\npath: ["analyzer", "synthesizer", "reviewer"]  // o […, "synthesizer", "reviewer"]\ncurrent_step: "done"',
     },
   ];
 
@@ -178,13 +178,13 @@ export class ExamplesSectionComponent {
       tab: 'Caso A · Flujo nominal',
       input: '¿Qué es LangGraph y para qué sirve?',
       logs: [
-        "INFO  | Grafo compilado: researcher -> writer -> editor -> END.",
-        "INFO  | ▶ Iniciando nodo 'researcher'.",
+        "INFO  | Grafo compilado: analyzer -> synthesizer -> reviewer -[REVISAR]-> synthesizer (máx. 2) / -[APROBADO]-> END.",
+        "INFO  | ▶ Iniciando nodo 'analyzer'.",
         'INFO  | Probando proveedor LLM: groq',
         "INFO  | Proveedor 'groq' respondió correctamente.",
-        "INFO  | ✔ Nodo 'researcher' finalizado.",
-        "INFO  | ▶ Iniciando nodo 'writer'. … ✔ finalizado.",
-        "INFO  | ▶ Iniciando nodo 'editor'. … ✔ finalizado.",
+        "INFO  | ✔ Nodo 'analyzer' finalizado.",
+        "INFO  | ▶ Iniciando nodo 'synthesizer'. … ✔ finalizado.",
+        "INFO  | ▶ Iniciando nodo 'reviewer'. … ✔ finalizado.",
         'INFO  | Grafo: pipeline completado.',
       ].join('\n'),
       output:
@@ -199,7 +199,7 @@ export class ExamplesSectionComponent {
         "WARNING | Fallo proveedor 'groq': 429 rate limit superado. Aplicando fallback…",
         'INFO  | Probando proveedor LLM: gemini',
         "INFO  | Proveedor 'gemini' respondió correctamente.",
-        "INFO  | ✔ Nodo 'researcher' finalizado. (el grafo continúa sin interrupción)",
+        "INFO  | ✔ Nodo 'analyzer' finalizado. (el grafo continúa sin interrupción)",
       ].join('\n'),
       output:
         '# El patrón Strategy en este proyecto\n\n## Idea\nCada proveedor LLM implementa la interfaz **LLMStrategy** con el método `generate()`…\n\n## Beneficio\nAñadir un proveedor nuevo es añadir una subclase, sin tocar agentes ni grafo.',
@@ -211,14 +211,14 @@ export class ExamplesSectionComponent {
       input: 'Compara Strategy vs Factory con ejemplos (MAX_REVISIONS=1)',
       logs: [
         'INFO  | Veredicto: REVISAR (motivo: siempre se puede mejorar).',
-        'INFO  | Enrutado: editor -> writer (revisión 1/1; motivo: …).',
+        'INFO  | Enrutado: reviewer -> synthesizer (revisión 1/1; motivo: …).',
         'INFO  | Borrador Nº 2 de 12 caracteres (2 puntos base).',
         'INFO  | Veredicto: REVISAR (motivo: siempre se puede mejorar).',
-        'WARNING | Enrutado: editor -> END (límite de revisiones alcanzado, máx. 1).',
+        'WARNING | Enrutado: reviewer -> END (límite de revisiones alcanzado, máx. 1).',
       ].join('\n'),
-      output: '# Parcial v1\n\n…(última versión del editor publicada tal cual)…',
+      output: '# Parcial v1\n\n…(última versión del revisor publicada tal cual)…',
       trace:
-        'path = [researcher, writer, editor, writer, editor] · revision_count = 1 · current_step = done · el ciclo siempre termina: garantía anti-bucle infinito',
+        'path = [analyzer, synthesizer, reviewer, synthesizer, reviewer] · revision_count = 1 · current_step = done · el ciclo siempre termina: garantía anti-bucle infinito',
     },
     {
       tab: 'Caso D · Finanzas + MCP',

@@ -150,13 +150,34 @@ class FinanceAnalystAgent(BaseAgent):
             *(m for m in state.get("messages", []) if isinstance(m, (AIMessage, ToolMessage))),
         ]
         result = self._llm.generate_with_tools(messages, self._tools)
-        calls = len(result.message.tool_calls or [])
-        self._logger.info("Analista responde con %d tool_calls (vía %s).", calls, result.provider)
+        self._logger.info(
+            "Analista pide herramientas: %s (vía %s).",
+            describe_tool_calls(result.message.tool_calls),
+            result.provider,
+        )
         return {
             "messages": [result.message],
             "_providers_used": [result.provider],
             "_errors": list(result.failures),
         }
+
+
+def describe_tool_calls(tool_calls: list[dict[str, Any]] | None) -> str:
+    """Resume tool_calls como 'get_budget_limit ×3, get_eur_usd_rate'.
+
+    Args:
+        tool_calls: Lista de tool_call dicts (con clave "name").
+
+    Returns:
+        Resumen agrupado, o "ninguna" si está vacío.
+    """
+    names = [str(c.get("name", "?")) for c in tool_calls or []]
+    if not names:
+        return "ninguna"
+    counts: dict[str, int] = {}
+    for name in names:
+        counts[name] = counts.get(name, 0) + 1
+    return ", ".join(f"{name} ×{total}" if total > 1 else name for name, total in counts.items())
 
 
 def _read_tool_json(messages: list[Any], tool_name: str) -> list[dict[str, Any]]:

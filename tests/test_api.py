@@ -44,7 +44,7 @@ class TestApi(unittest.TestCase):
         body = res.json()
         self.assertEqual(body["mode"], "demo")
         self.assertEqual(
-            body["path"], ["researcher", "writer", "editor", "writer", "editor"]
+            body["path"], ["analyzer", "synthesizer", "reviewer", "synthesizer", "reviewer"]
         )
         self.assertEqual(body["revision_count"], 1)
         self.assertTrue(body["final_report"].startswith("# Informe demo"))
@@ -62,7 +62,7 @@ class TestApi(unittest.TestCase):
             self.assertIn("text/event-stream", res.headers["content-type"])
             text = res.read().decode()
         self.assertIn("event: start", text)
-        self.assertIn('"entry": "researcher"', text)
+        self.assertIn('"entry": "analyzer"', text)
         self.assertIn("event: node", text)
         self.assertIn("event: done", text)
         self.assertIn('"revision_count": 1', text)
@@ -70,7 +70,7 @@ class TestApi(unittest.TestCase):
         self.assertIn("Veredicto: REVISAR", text)
         self.assertIn("Veredicto: APROBADO", text)
         self.assertIn("event: route", text)
-        self.assertIn('"to": "writer"', text)
+        self.assertIn('"to": "synthesizer"', text)
         self.assertIn('"to": "end"', text)
         self.assertIn('"snapshot"', text)
         self.assertIn('"research_points"', text)

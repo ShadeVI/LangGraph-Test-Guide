@@ -16,7 +16,7 @@ export interface RunResult {
   errors: string[];
   revision_count: number;
   current_step: string;
-  editor_feedback: string;
+  reviewer_feedback: string;
   research_points: string[];
   draft: string;
 }
@@ -28,7 +28,7 @@ export interface StateSnapshot {
   final_report: string;
   revision_count: number;
   needs_revision: boolean | null;
-  editor_feedback: string;
+  reviewer_feedback: string;
   path: string[];
   providers_used: string[];
   errors: string[];

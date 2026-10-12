@@ -23,9 +23,9 @@ interface HistoryLine {
 type Status = 'idle' | 'running' | 'done' | 'error';
 
 const NODE_ICONS: Record<string, string> = {
-  researcher: '🔍',
-  writer: '✍️',
-  editor: '📝',
+  analyzer: '🔍',
+  synthesizer: '✍️',
+  reviewer: '📝',
   loader: '📥',
   extractor: '🧮',
   analyst: '🕵️',
@@ -33,7 +33,19 @@ const NODE_ICONS: Record<string, string> = {
   reporter: '📊',
 };
 
-const FLOW = ['researcher', 'writer', 'editor'] as const;
+/** Nombre visible (las claves internas del grafo no cambian). */
+const NODE_LABELS: Record<string, string> = {
+  analyzer: 'Analizador',
+  synthesizer: 'Sintetizador',
+  reviewer: 'Revisor',
+  loader: 'Cargador',
+  extractor: 'Extractor',
+  analyst: 'Analista',
+  tools: 'Herramientas',
+  reporter: 'Informe',
+};
+
+const FLOW = ['analyzer', 'synthesizer', 'reviewer'] as const;
 const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as const;
 
 @Component({
@@ -95,7 +107,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
 
         <div class="card" appReveal [delay]="100">
           <label>
-            Consulta para los agentes
+            Tema del informe
             <input
               class="field"
               [ngModel]="query()"
@@ -108,7 +120,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
             @for (ex of examples; track ex.label) {
               <button class="chip-btn" (click)="useExample(ex.query)" [disabled]="busy()">{{ ex.label }}</button>
             }
-            <small class="ex-note">En <strong>demo</strong>, <em>cualquier</em> pregunta pasa por 1 revisión (está guionizado para mostrar el ciclo). En <strong>live</strong> decide el criterio del modelo: no hay pregunta mágica garantizada, pero las vagas o muy amplias suelen dar borradores flojos que el editor devuelve. Requiere Máx. revisiones ≥ 1.</small>
+            <small class="ex-note">En <strong>demo</strong>, <em>cualquier</em> pregunta pasa por 1 revisión (está guionizado para mostrar el ciclo). En <strong>live</strong> decide el criterio del modelo: no hay pregunta mágica garantizada, pero las vagas o muy amplias suelen dar borradores flojos que el revisor devuelve. Requiere Máx. revisiones ≥ 1.</small>
           </div>
           <div class="form-row">
             <label>
@@ -184,7 +196,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
               @for (n of flowNodes(); track n; let i = $index) {
                 <div class="fnode" [class]="nodeClass(n)">
                   <span class="f-ico">{{ icon(n) }}</span>
-                  <strong>{{ n }}</strong>
+                  <strong>{{ label(n) }}</strong>
                   @if (count(n) > 1) { <em>×{{ count(n) }}</em> }
                   @else if (count(n) === 1) { <em>✓</em> }
                 </div>
@@ -195,7 +207,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
             </div>
             <div class="loop-note">
               @if (flowNodes()[0] === 'loader') { ↩ loop: analyst ⇄ tools (máx. 5) · analyst —sin tools→ reporter }
-              @else { ↩ arista condicional: editor —REVISAR→ writer · —APROBADO→ END }
+              @else { ↩ arista condicional: reviewer —REVISAR→ synthesizer · —APROBADO→ END }
             </div>
           </div>
         }
@@ -221,7 +233,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
         @if (selectedNode(); as sel) {
           <div class="card node-detail fade-swap">
             <div class="detail-head">
-              <h3>{{ icon(sel) }} {{ sel }} — detalle</h3>
+              <h3>{{ icon(sel) }} {{ label(sel) }} — detalle</h3>
               <button class="btn ghost sm" (click)="selectNode(sel)">✕ cerrar</button>
             </div>
             @if (nodeLines(sel).length === 0) {
@@ -277,7 +289,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
               <div><span>Informe</span><strong>{{ s.final_report.length }} caracteres</strong></div>
             </div>
             <details>
-              <summary>research_points ({{ s.research_points.length }}) — lo que lee el Writer</summary>
+              <summary>research_points ({{ s.research_points.length }}) — lo que lee el Synthesizer</summary>
               <ul>
                 @for (p of s.research_points; track $index) {
                   <li>{{ p }}</li>
@@ -285,11 +297,11 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
               </ul>
             </details>
             <details>
-              <summary>draft — lo que evalúa el Editor</summary>
-              <pre class="code report">{{ s.draft || '(vacío: el Writer aún no lo generó)' }}</pre>
+              <summary>draft — lo que evalúa el Reviewer</summary>
+              <pre class="code report">{{ s.draft || '(vacío: el Synthesizer aún no lo generó)' }}</pre>
             </details>
-            @if (s.editor_feedback) {
-              <div class="callout warn"><strong>Feedback del editor:</strong> {{ s.editor_feedback }}</div>
+            @if (s.reviewer_feedback) {
+              <div class="callout warn"><strong>Feedback del revisor:</strong> {{ s.reviewer_feedback }}</div>
             }
           </div>
         }
@@ -315,7 +327,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
               <h3>Ruta recorrida</h3>
               <div class="route">
                 @for (n of r.path; track $index; let last = $last) {
-                  <button class="chip" [class.selected]="selectedNode() === n" (click)="selectNode(n)" title="Ver detalle del nodo">{{ icon(n) }} {{ n }}</button>
+                  <button class="chip" [class.selected]="selectedNode() === n" (click)="selectNode(n)" title="Ver detalle del nodo">{{ icon(n) }} {{ label(n) }}</button>
                   @if (!last) { <span class="arrow">→</span> }
                 }
               </div>
@@ -351,7 +363,7 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
             <h3>Ruta del análisis</h3>
             <div class="route">
               @for (n of fr.path; track $index; let last = $last) {
-                <button class="chip" [class.selected]="selectedNode() === n" (click)="selectNode(n)" title="Ver detalle del nodo">{{ icon(n) }} {{ n }}</button>
+                <button class="chip" [class.selected]="selectedNode() === n" (click)="selectNode(n)" title="Ver detalle del nodo">{{ icon(n) }} {{ label(n) }}</button>
                 @if (!last) { <span class="arrow">→</span> }
               }
             </div>
@@ -597,6 +609,10 @@ export class DemoPage implements OnDestroy {
     return NODE_ICONS[node] ?? '•';
   }
 
+  label(node: string): string {
+    return NODE_LABELS[node] ?? node;
+  }
+
   /** Líneas del historial del nodo seleccionado (detalle clicable). */
   nodeLines(node: string): HistoryLine[] {
     return this.history().filter((h) => h.node === node);
@@ -638,12 +654,12 @@ export class DemoPage implements OnDestroy {
       `La consulta recorrió ${r.path.length} pasos: ${r.path.join(' → ')}.`,
     ];
     if (r.revision_count > 0) {
-      const motive = r.editor_feedback ? ` por «${r.editor_feedback}»` : '';
+      const motive = r.reviewer_feedback ? ` por «${r.reviewer_feedback}»` : '';
       lines.push(
-        `El editor pidió ${r.revision_count} revisión${r.revision_count > 1 ? 'es' : ''}${motive}; el redactor generó un borrador nuevo y el editor lo aprobó.`,
+        `El revisor pidió ${r.revision_count} revisión${r.revision_count > 1 ? 'es' : ''}${motive}; el sintetizador generó un borrador nuevo y el revisor lo aprobó.`,
       );
     } else {
-      lines.push('El editor aprobó el primer borrador: ruta lineal sin revisiones.');
+      lines.push('El revisor aprobó el primer borrador: ruta lineal sin revisiones.');
     }
     const tally = new Map<string, number>();
     for (const p of r.providers_used) tally.set(p, (tally.get(p) ?? 0) + 1);
@@ -772,7 +788,7 @@ export class DemoPage implements OnDestroy {
           this.snapshot.set(data.snapshot as StateSnapshot);
         }
       }
-      this.pushHistory('node', `▸ ${data.node} — ${data.summary ?? ''}`, data.node);
+      this.pushHistory('node', `▸ ${this.label(data.node)} — ${data.summary ?? ''}`, data.node);
     });
 
     es.addEventListener('route', (raw) => {
@@ -784,7 +800,7 @@ export class DemoPage implements OnDestroy {
       // La ruta anuncia quién EMPIEZA a trabajar ahora (el evento de nodo
       // solo llegará cuando termine, segundos/minutos después en live).
       this.activeNode.set(data.to === 'end' ? null : data.to);
-      this.pushHistory('route', `↩ ${data.from} → ${data.to} · ${data.detail}`, data.to === 'end' ? undefined : data.to);
+      this.pushHistory('route', `↩ ${this.label(data.from)} → ${data.to === 'end' ? 'FIN' : this.label(data.to)} · ${data.detail}`, data.to === 'end' ? undefined : data.to);
     });
 
     es.addEventListener('done', (raw) => {
@@ -872,12 +888,12 @@ export class DemoPage implements OnDestroy {
           at: new Date().toLocaleTimeString(),
         }]);
         if (data.snapshot) this.financeSnapshot.set(data.snapshot);
-        this.pushHistory('node', `▸ ${data.node} — ${data.summary ?? ''}`, data.node);
+        this.pushHistory('node', `▸ ${this.label(data.node)} — ${data.summary ?? ''}`, data.node);
       });
       es.addEventListener('route', (raw) => {
         const data = JSON.parse((raw as MessageEvent).data) as { from: string; to: string; detail: string };
         this.activeNode.set(data.to === 'end' ? null : data.to);
-        this.pushHistory('route', `↩ ${data.from} → ${data.to} · ${data.detail}`, data.to === 'end' ? undefined : data.to);
+        this.pushHistory('route', `↩ ${this.label(data.from)} → ${data.to === 'end' ? 'FIN' : this.label(data.to)} · ${data.detail}`, data.to === 'end' ? undefined : data.to);
       });
       es.addEventListener('done', (raw) => {
         const fr = JSON.parse((raw as MessageEvent).data) as FinanceResult;
@@ -912,7 +928,7 @@ export class DemoPage implements OnDestroy {
       final_report: r.final_report,
       revision_count: r.revision_count,
       needs_revision: false,
-      editor_feedback: r.editor_feedback,
+      reviewer_feedback: r.reviewer_feedback,
       path: r.path,
       providers_used: r.providers_used,
       errors: r.errors,
@@ -931,7 +947,7 @@ export class DemoPage implements OnDestroy {
       this.result.set(r);
       this.snapshot.set(this.snapshotFrom(r));
       this.pushHistory('start', `▶ inicio (modo directo POST): "${r.query}"`);
-      for (const node of r.path) this.pushHistory('node', `▸ ${node}`);
+      for (const node of r.path) this.pushHistory('node', `▸ ${this.label(node)}`, node);
       this.pushHistory(
         'done',
         `■ fin — ${r.path.length} pasos, ${r.revision_count} revisión(es), informe de ${r.final_report.length} caracteres`,
