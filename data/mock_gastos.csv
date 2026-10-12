@@ -1,0 +1,13 @@
+fecha,concepto,categoria,importe,moneda
+2026-09-02,Supermercado semanal,COMIDA,85.40,EUR
+2026-09-03,Abono transporte,TRANSPORTE,45.00,EUR
+2026-09-05,Restaurante centro,COMIDA,62.00,EUR
+2026-09-06,Suscripción streaming,OCIO,12.99,EUR
+2026-09-09,Supermercado semanal,COMIDA,91.20,EUR
+2026-09-12,Videojuego (Steam),OCIO,59.99,USD
+2026-09-14,Restaurante sushi,COMIDA,74.50,EUR
+2026-09-17,Taxi aeropuerto,TRANSPORTE,38.50,EUR
+2026-09-19,Entradas cine,OCIO,24.00,EUR
+2026-09-20,Compra online despensa,COMIDA,120.00,EUR
+2026-09-25,Hotel fin de semana,OCIO,180.00,USD
+2026-09-27,Cena empresa,COMIDA,68.90,EUR

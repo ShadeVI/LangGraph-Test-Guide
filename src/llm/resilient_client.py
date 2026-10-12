@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
+
+from langchain_core.messages import AIMessage, BaseMessage
 
 from config.logging_config import get_logger
 from src.llm.base import (
@@ -30,6 +33,23 @@ class GenerationResult:
     provider: str
     attempted: tuple[str, ...]
     failures: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ToolGenerationResult:
+    """Resultado trazable de una llamada con tools.
+
+    Attributes:
+        message: AIMessage con contenido y/o `tool_calls`.
+        provider: Nombre del proveedor que respondió.
+        attempted: Proveedores intentados en orden.
+        failures: Mensajes de fallo por proveedor.
+    """
+
+    message: AIMessage
+    provider: str
+    attempted: tuple[str, ...]
+    failures: tuple[str, ...] = field(default_factory=tuple)
 
 
 class ResilientLLMClient:
@@ -90,6 +110,51 @@ class ResilientLLMClient:
             except Exception as exc:  # noqa: BLE001 — robustez ante errores imprevistos
                 msg = f"[{strategy.name}] error inesperado: {exc}"
                 failures.append(msg)
+                logger.error("Error inesperado en '%s': %s. Aplicando fallback…", strategy.name, exc)
+        logger.error("Todos los proveedores LLM fallaron (%d intentos).", len(self._strategies))
+        raise LLMAllProvidersFailedError(" | ".join(failures))
+
+    def generate_with_tools(
+        self, messages: list[BaseMessage], tools: list[Any]
+    ) -> ToolGenerationResult:
+        """Invoca con tools enlazadas, con fallback entre proveedores.
+
+        Args:
+            messages: Historial (system/human/ai/tool).
+            tools: Tools LangChain a enlazar.
+
+        Returns:
+            Mensaje del ganador (contenido y/o `tool_calls`) con traza.
+
+        Raises:
+            LLMAllProvidersFailedError: Si todos los proveedores fallan.
+        """
+        failures: list[str] = []
+        for strategy in self._strategies:
+            logger.info("Probando proveedor LLM con tools: %s", strategy.name)
+            try:
+                message = strategy.invoke_with_tools(messages, tools)
+                calls = len(message.tool_calls or [])
+                logger.info(
+                    "Proveedor '%s' respondió (%d tool_calls).", strategy.name, calls
+                )
+                return ToolGenerationResult(
+                    message=message,
+                    provider=strategy.name,
+                    attempted=self.provider_names,
+                    failures=tuple(failures),
+                )
+            except NotImplementedError as exc:
+                failures.append(f"[{strategy.name}] {exc}")
+                logger.info("Proveedor '%s' sin tools: %s", strategy.name, exc)
+            except LLMConfigurationError as exc:
+                failures.append(f"[{strategy.name}] {exc}")
+                logger.info("Proveedor '%s' omitido: %s", strategy.name, exc)
+            except LLMProviderError as exc:
+                failures.append(f"[{strategy.name}] {exc}")
+                logger.warning("Fallo proveedor '%s': %s. Aplicando fallback…", strategy.name, exc)
+            except Exception as exc:  # noqa: BLE001 — robustez ante errores imprevistos
+                failures.append(f"[{strategy.name}] error inesperado: {exc}")
                 logger.error("Error inesperado en '%s': %s. Aplicando fallback…", strategy.name, exc)
         logger.error("Todos los proveedores LLM fallaron (%d intentos).", len(self._strategies))
         raise LLMAllProvidersFailedError(" | ".join(failures))

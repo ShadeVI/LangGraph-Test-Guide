@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from langchain_core.messages import AIMessage, BaseMessage
+
 from config.logging_config import get_logger
 from config.settings import Settings
 from src.llm.base import LLMConfigurationError, LLMProviderError, LLMStrategy
@@ -61,4 +63,18 @@ class GeminiStrategy(LLMStrategy):
             raise
         except Exception as exc:  # noqa: BLE001 — normalización a error de dominio
             logger.debug("Gemini falló: %s", exc)
+            raise LLMProviderError(f"Gemini no disponible: {exc}") from exc
+
+    def invoke_with_tools(
+        self, messages: list[BaseMessage], tools: list[Any]
+    ) -> AIMessage:
+        """Invoca a Gemini con tools enlazadas (function calling nativo)."""
+        if not self._settings.google_api_key:
+            raise LLMConfigurationError("GOOGLE_API_KEY no configurada (proveedor omitido).")
+        try:
+            return _build_chat_gemini(self._settings).bind_tools(tools).invoke(messages)
+        except LLMProviderError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — normalización a error de dominio
+            logger.debug("Gemini con tools falló: %s", exc)
             raise LLMProviderError(f"Gemini no disponible: {exc}") from exc

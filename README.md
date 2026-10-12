@@ -72,6 +72,23 @@ npm install
 npx ng serve --open   # http://localhost:4200
 ```
 
+## Flujo financiero (CSV + tools MCP → informe)
+
+Segundo grafo de ejemplo: `loader → extractor → analyst ⇄ tools → reporter`.
+Subes un CSV de gastos (`fecha,concepto,categoria,importe,moneda`) y el analista
+consulta por protocolo MCP un servidor propio (`mcp_server/`, stdio):
+
+- `get_budget_limit(categoria)` → lee `data/budgets.json` (BD ficticia).
+- `get_eur_usd_rate()` → tasa EUR→USD en tiempo real (Frankfurter, sin key).
+
+Sin fichero se usa `data/mock_gastos.csv` (provoca 1 alerta a propósito).
+El loop analyst↔tools está acotado (`MAX_TOOL_ITERATIONS=5`) y el informe
+Markdown lo compone un reporter determinista (sin llamada LLM: rápido y testeable).
+
+```powershell
+python tests/test_finance.py   # 12 tests (MCP real por stdio incluido)
+```
+
 ## API REST (FastAPI, `api/`)
 
 Expone el grafo por HTTP para integrarlo en la web (o en cualquier cliente).
@@ -90,6 +107,7 @@ python -m uvicorn api.main:app --port 8000   # demo (API_MODE=demo en .env)
 | GET | `/api/config` | Config pública (orden de proveedores, sin secretos) |
 | POST | `/api/run` | Ejecuta el grafo; devuelve informe, ruta, proveedores y errores |
 | GET | `/api/run/stream` | SSE: `start` → (`node` → `route`)* → `done` (ideal para la demo web) |
+| POST | `/api/finance/run` | Sube un CSV de gastos (multipart `file`; sin fichero usa el mock) → informe Markdown + trazabilidad |
 
 ## Resiliencia (fallback) y ciclo de revisión
 

@@ -2,7 +2,7 @@ import { Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@an
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { RevealDirective } from '../shared/reveal.directive';
-import { ApiService, RunResult, StateSnapshot } from './api.service';
+import { ApiService, FinanceResult, RunResult, StateSnapshot } from './api.service';
 
 interface TimelineEvent {
   node: string;
@@ -260,6 +260,73 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
             </div>
           }
         }
+
+        <div class="card">
+          <h3>💰 Análisis financiero (segundo flujo: CSV + tools MCP)</h3>
+          <p class="lead" style="font-size: 0.9rem">
+            Sube un <code>.csv</code> con columnas <code>fecha,concepto,categoria,importe,moneda</code>
+            (o no subas nada y se usa el ejemplo). Los agentes lo agregan, consultan presupuestos y
+            la tasa EUR→USD por MCP, e informan en Markdown.
+          </p>
+          <div class="form-row">
+            <label>
+              Archivo .csv (opcional)
+              <input class="field" type="file" accept=".csv,text/csv" (change)="onFilePicked($event)" />
+            </label>
+            <div class="btns">
+              <div class="mode">
+                <button class="btn primary" (click)="analyzeFinance()" [disabled]="financeStatus() === 'running'">
+                  @if (financeStatus() === 'running') { ⏳ Analizando… } @else { 💰 Analizar gastos }
+                </button>
+                <small>POST multipart: sin SSE en este flujo (v1).</small>
+              </div>
+            </div>
+          </div>
+          @if (financeFile()) { <p class="hint">Seleccionado: {{ financeFile()!.name }}</p> }
+        </div>
+
+        @if (financeResult(); as fr) {
+          <div class="fade-swap">
+            <h3>Ruta del análisis</h3>
+            <div class="route">
+              @for (n of fr.path; track $index; let last = $last) {
+                <span class="chip">{{ n }}</span>
+                @if (!last) { <span class="arrow">→</span> }
+              }
+            </div>
+            <div class="grid2">
+              <div class="card">
+                <h3>Informe de gastos (modo {{ fr.mode }})</h3>
+                <pre class="code report">{{ fr.final_report }}</pre>
+                <button class="btn ghost" (click)="downloadFinanceReport()">⬇ Descargar .md</button>
+              </div>
+              <div class="card">
+                <h3>Datos clave</h3>
+                <p><strong>Fichero:</strong> {{ fr.filename }} @if (fr.used_mock) { (ejemplo) }</p>
+                <p><strong>Filas:</strong> {{ fr.row_count }} · <strong>Tools:</strong> {{ fr.tool_iterations }} vuelta(s)</p>
+                <p><strong>Tasa EUR→USD:</strong>
+                  @if (fr.fx_rate) { {{ fr.fx_rate }} ({{ fr.fx_date }}, {{ fr.fx_source }}) }
+                  @else { no disponible }
+                </p>
+                <p><strong>Alertas:</strong></p>
+                @if (fr.budget_alerts.length === 0) { <p>ninguna</p> }
+                @else {
+                  @for (a of fr.budget_alerts; track $index) {
+                    <div class="callout warn">{{ a }}</div>
+                  }
+                }
+                <p><strong>Hallazgos:</strong></p>
+                <ul class="findings">
+                  @for (f of fr.findings; track $index) { <li>{{ f }}</li> }
+                </ul>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (financeError()) {
+          <div class="callout warn fade-swap"><strong>Error:</strong> {{ financeError() }}</div>
+        }
         }
       </div>
     </section>
@@ -380,6 +447,9 @@ const FLOW = ['researcher', 'writer', 'editor'] as const;
       .narr li { color: var(--muted); font-size: 0.93rem; }
       .narr li::marker { color: var(--accent-2); }
       .narr .hint { margin: 0.8rem 0 0; font-size: 0.8rem; }
+      ul.findings { margin: 0.4rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.3rem; }
+      ul.findings li { color: var(--muted); font-size: 0.88rem; }
+      ul.findings li::marker { color: var(--accent-2); }
       p.hint { margin: 0.6rem 0 0; font-size: 0.78rem; color: var(--muted); }
       h3 { margin-top: 1.4rem; }
       p strong { color: var(--text); }
@@ -412,6 +482,10 @@ export class DemoPage implements OnDestroy {
   readonly apiOk = signal<boolean | null>(null);
   readonly apiMode = signal('');
   readonly elapsed = signal(0);
+  readonly financeFile = signal<File | null>(null);
+  readonly financeStatus = signal<Status>('idle');
+  readonly financeResult = signal<FinanceResult | null>(null);
+  readonly financeError = signal<string | null>(null);
   /** true solo en local (ng serve): ahí sí tiene sentido la consola en vivo. */
   readonly isLocalhost = signal(
     typeof window !== 'undefined' &&
@@ -639,8 +713,7 @@ export class DemoPage implements OnDestroy {
     };
   }
 
-  /** Reconstruye el snapshot final desde un RunResponse (modo POST o done). */
-  private snapshotFrom(r: RunResult): StateSnapshot {
+  /** Reconstruye el snapshot final desde un RunResponse (modo POST o done). */  private snapshotFrom(r: RunResult): StateSnapshot {
     return {
       query: r.query,
       research_points: r.research_points,
@@ -679,5 +752,38 @@ export class DemoPage implements OnDestroy {
       );
       this.finish('error');
     }
+  }
+
+  onFilePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = input.files && input.files.length > 0 ? input.files[0] : null;
+    this.financeFile.set(picked);
+  }
+
+  async analyzeFinance(): Promise<void> {
+    this.financeResult.set(null);
+    this.financeError.set(null);
+    this.financeStatus.set('running');
+    try {
+      this.financeResult.set(await this.api.analyzeFinance(this.financeFile()));
+      this.financeStatus.set('done');
+    } catch {
+      this.financeError.set(
+        'La API no responde o falló. Arráncala con: python -m uvicorn api.main:app --port 8000',
+      );
+      this.financeStatus.set('error');
+    }
+  }
+
+  downloadFinanceReport(): void {
+    const r = this.financeResult();
+    if (!r) return;
+    const blob = new Blob([r.final_report], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'informe-gastos.md';
+    link.click();
+    URL.revokeObjectURL(url);
   }
 }

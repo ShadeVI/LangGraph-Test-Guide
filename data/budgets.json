@@ -1,0 +1,9 @@
+{
+  "_moneda": "EUR",
+  "_nota": "Límites mensuales de gasto por categoría (base de datos ficticia)",
+  "COMIDA": 300.0,
+  "TRANSPORTE": 120.0,
+  "OCIO": 150.0,
+  "SALUD": 200.0,
+  "SERVICIOS": 150.0
+}

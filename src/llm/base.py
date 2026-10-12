@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
+
+from langchain_core.messages import AIMessage, BaseMessage
 
 
 class LLMProviderError(RuntimeError):
@@ -48,3 +51,21 @@ class LLMStrategy(ABC):
             LLMProviderError: Ante cualquier fallo recuperable.
         """
         ...
+
+    def invoke_with_tools(
+        self, messages: list[BaseMessage], tools: list[Any]
+    ) -> AIMessage:
+        """Invoca al modelo con tools enlazadas (function calling).
+
+        Args:
+            messages: Historial (system/human/ai/tool).
+            tools: Tools LangChain (con .name/.description/.args).
+
+        Returns:
+            AIMessage con contenido y/o `tool_calls`.
+
+        Raises:
+            NotImplementedError: Si el proveedor no soporta tools.
+            LLMProviderError: Ante cualquier fallo recuperable.
+        """
+        raise NotImplementedError(f"{self.name} no soporta llamadas a tools.")

@@ -26,6 +26,7 @@ from config.settings import get_settings
 from src.llm.base import LLMAllProvidersFailedError
 from src.llm.factory import PROVIDER_ORDER
 from api import service
+from api import finance as finance_api
 from api.schemas import ConfigResponse, HealthResponse, RunRequest, RunResponse
 
 logger = get_logger(__name__)
@@ -52,6 +53,7 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+app.include_router(finance_api.router)
 
 
 @app.get("/", include_in_schema=False)

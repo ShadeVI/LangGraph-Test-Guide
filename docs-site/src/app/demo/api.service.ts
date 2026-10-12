@@ -35,6 +35,26 @@ export interface StateSnapshot {
   current_step: string;
 }
 
+export interface FinanceResult {
+  filename: string;
+  used_mock: boolean;
+  mode: string;
+  row_count: number;
+  totals: Record<string, Record<string, number>>;
+  fx_rate: number | null;
+  fx_date: string;
+  fx_source: string;
+  fx_stale: boolean;
+  budget_alerts: string[];
+  findings: string[];
+  final_report: string;
+  path: string[];
+  providers_used: string[];
+  errors: string[];
+  tool_iterations: number;
+  current_step: string;
+}
+
 /** Cliente HTTP de la API FastAPI (por defecto, uvicorn local). */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -61,5 +81,11 @@ export class ApiService {
       `${this.baseUrl()}/api/run/stream` +
       `?query=${encodeURIComponent(query)}&max_revisions=${maxRevisions}`
     );
+  }
+
+  analyzeFinance(file: File | null): Promise<FinanceResult> {
+    const data = new FormData();
+    if (file) data.append('file', file, file.name);
+    return firstValueFrom(this.http.post<FinanceResult>(`${this.baseUrl()}/api/finance/run`, data));
   }
 }
