@@ -231,7 +231,7 @@ export class UsageSectionComponent {
   readonly env: string[][] = [
     ['GROQ_API_KEY', '—', 'Proveedor prioritario (nube)'],
     ['GOOGLE_API_KEY', '—', 'Segundo en el fallback (nube)'],
-    ['GROQ_MODEL / GEMINI_MODEL', 'llama-3.3-70b… / gemini-2.0-flash', 'Modelos por proveedor'],
+    ['GROQ_MODEL / GEMINI_MODEL', 'llama-3.3-70b… / gemini-flash-latest', 'Modelos por proveedor'],
     ['OLLAMA_MODEL / OLLAMA_BASE_URL', 'llama3.1 / localhost:11434', 'Respaldo local sin key'],
     ['OLLAMA_NUM_PREDICT', '1024', 'Tope de tokens por llamada (imprescindible en CPU)'],
     ['OLLAMA_THINK', 'false', 'Razonamiento interno qwen3.x (en CPU, dejar en false)'],

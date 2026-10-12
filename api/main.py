@@ -62,6 +62,12 @@ def root() -> dict[str, str]:
     return {"service": "Multi-Agente API", "health": "/api/health", "docs": "/docs"}
 
 
+@app.get("/health", include_in_schema=False)
+def health_alias() -> HealthResponse:
+    """Alias sin prefijo (monitores/probes que preguntan en /health)."""
+    return health()
+
+
 @app.get("/api/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     """Sonda de vida: confirma que la API responde y en qué modo."""

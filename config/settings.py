@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
 
     groq_model: str = Field(default="llama-3.3-70b-versatile", alias="GROQ_MODEL")
-    gemini_model: str = Field(default="gemini-2.0-flash", alias="GEMINI_MODEL")
+    gemini_model: str = Field(default="gemini-flash-latest", alias="GEMINI_MODEL")
     ollama_model: str = Field(default="llama3.1", alias="OLLAMA_MODEL")
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
     ollama_num_predict: int = Field(default=1024, alias="OLLAMA_NUM_PREDICT")

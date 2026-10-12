@@ -12,6 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from langchain_core.messages import AIMessage  # noqa: E402
+
 from config.logging_config import configure_logging  # noqa: E402
 from src.agents.editor import EditorAgent  # noqa: E402
 from src.graph.builder import (  # noqa: E402
@@ -141,6 +143,60 @@ class TestResilientClient(unittest.TestCase):
         result = client.generate("hola")
         self.assertEqual(result.provider, "ok")
         self.assertEqual(len(result.failures), 1)
+
+
+class TestGeminiConverters(unittest.TestCase):
+    """Conversores genai↔LangChain sin red (la API real se prueba en vivo)."""
+
+    def test_to_contents_mapea_roles(self) -> None:
+        from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+
+        from src.llm.gemini_strategy import _to_contents
+
+        system, contents = _to_contents(
+            [
+                SystemMessage(content="Eres analista."),
+                HumanMessage(content="Analiza esto."),
+                ToolMessage(content='{"limit_eur": 300}', name="get_budget_limit", tool_call_id="c1"),
+            ]
+        )
+        self.assertEqual(system, "Eres analista.")
+        self.assertEqual([c.role for c in contents], ["user", "user"])
+        self.assertEqual(contents[1].parts[0].function_response.name, "get_budget_limit")
+
+    def test_to_contents_ai_con_tools(self) -> None:
+        from src.llm.gemini_strategy import _to_contents
+
+        _, contents = _to_contents(
+            [AIMessage(content="", tool_calls=[{"name": "fx", "args": {}, "id": "1", "type": "tool_call"}])]
+        )
+        part = contents[0].parts[0]
+        self.assertEqual(part.function_call.name, "fx")
+
+    def test_to_ai_message(self) -> None:
+        from types import SimpleNamespace
+
+        from src.llm.gemini_strategy import _to_ai_message
+
+        response = SimpleNamespace(
+            text="listo",
+            function_calls=[SimpleNamespace(name="fx", args={"x": 1})],
+        )
+        message = _to_ai_message(response)
+        self.assertEqual(message.content, "listo")
+        self.assertEqual(message.tool_calls[0]["name"], "fx")
+        self.assertEqual(message.tool_calls[0]["args"], {"x": 1})
+        self.assertTrue(message.tool_calls[0]["id"])
+        self.assertIsNone(_to_ai_message(SimpleNamespace(text=None, function_calls=None)).content or None)
+
+    def test_gen_config_sin_thinking(self) -> None:
+        from src.llm.gemini_strategy import _gen_config
+
+        from config.settings import Settings
+
+        cfg = _gen_config(Settings(_env_file=None))
+        self.assertEqual(cfg.thinking_config.thinking_budget, 0)
+        self.assertIsNone(cfg.tools)
 
 
 class TestVerdictParsing(unittest.TestCase):
