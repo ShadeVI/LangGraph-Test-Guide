@@ -139,6 +139,36 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
           </div>
         </div>
 
+        <div class="card">
+          <h3>💰 Análisis financiero (segundo flujo: CSV + tools MCP)</h3>
+          <p class="lead" style="font-size: 0.9rem">
+            Sube un <code>.csv</code> con columnas <code>fecha,concepto,categoria,importe,moneda</code>
+            (o no subas nada y se usa el ejemplo). Los agentes lo agregan, consultan presupuestos y
+            la tasa EUR→USD por MCP, e informan en Markdown.
+          </p>
+          <div class="form-row">
+            <label>
+              Archivo .csv (opcional)
+              <input class="field" type="file" accept=".csv,text/csv" (change)="onFilePicked($event)" />
+            </label>
+            <div class="btns">
+              <div class="mode">
+                <button class="btn primary" (click)="runFinanceStream()" [disabled]="busy() || financeStatus() === 'running'">
+                  ⚡ Transmitir en vivo
+                </button>
+                <small>SSE: cada nodo aparece <em>mientras trabaja</em>, con su resumen.</small>
+              </div>
+              <div class="mode">
+                <button class="btn ghost" (click)="analyzeFinance()" [disabled]="financeStatus() === 'running'">
+                  @if (financeStatus() === 'running') { ⏳ Analizando… } @else { 💰 Analizar directo }
+                </button>
+                <small>POST: sin línea de tiempo; solo el dossier final.</small>
+              </div>
+            </div>
+          </div>
+          @if (financeFile()) { <p class="hint">Seleccionado: {{ financeFile()!.name }}</p> }
+        </div>
+
         @if (showFlow()) {
           <div class="card fade-swap">
             <div class="flow-head">
@@ -315,36 +345,6 @@ const FINANCE_FLOW = ['loader', 'extractor', 'analyst', 'tools', 'reporter'] as 
             </div>
           }
         }
-
-        <div class="card">
-          <h3>💰 Análisis financiero (segundo flujo: CSV + tools MCP)</h3>
-          <p class="lead" style="font-size: 0.9rem">
-            Sube un <code>.csv</code> con columnas <code>fecha,concepto,categoria,importe,moneda</code>
-            (o no subas nada y se usa el ejemplo). Los agentes lo agregan, consultan presupuestos y
-            la tasa EUR→USD por MCP, e informan en Markdown.
-          </p>
-          <div class="form-row">
-            <label>
-              Archivo .csv (opcional)
-              <input class="field" type="file" accept=".csv,text/csv" (change)="onFilePicked($event)" />
-            </label>
-            <div class="btns">
-              <div class="mode">
-                <button class="btn primary" (click)="runFinanceStream()" [disabled]="busy() || financeStatus() === 'running'">
-                  ⚡ Transmitir en vivo
-                </button>
-                <small>SSE: cada nodo aparece <em>mientras trabaja</em>, con su resumen.</small>
-              </div>
-              <div class="mode">
-                <button class="btn ghost" (click)="analyzeFinance()" [disabled]="financeStatus() === 'running'">
-                  @if (financeStatus() === 'running') { ⏳ Analizando… } @else { 💰 Analizar directo }
-                </button>
-                <small>POST: sin línea de tiempo; solo el dossier final.</small>
-              </div>
-            </div>
-          </div>
-          @if (financeFile()) { <p class="hint">Seleccionado: {{ financeFile()!.name }}</p> }
-        </div>
 
         @if (financeResult(); as fr) {
           <div class="fade-swap">
